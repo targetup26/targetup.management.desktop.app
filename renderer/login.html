@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login - SROHUB</title>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="drag-overlay"></div>
+
+    <div class="login-stage">
+        <div class="login-auth-card">
+            <div style="text-align: center; margin-bottom: 40px;">
+                <div class="nav-logo"
+                    style="width: 64px; height: 64px; margin: 0 auto 24px; font-size: 1.8rem; border-radius: 18px;">T
+                </div>
+                <h1 style="font-size: 1.8rem; font-weight: 900; color: #fff; letter-spacing: -1px; margin-bottom: 8px;">
+                    LOGIN</h1>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); letter-spacing: 0.5px;">PLEASE SIGN IN TO
+                    CONTINUE</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="glass-label">Username</label>
+                    <input type="text" id="username" class="login-field" required placeholder="name@company.com"
+                        autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label class="glass-label">Password</label>
+                    <input type="password" id="password" class="login-field" required placeholder="••••••••"
+                        autocomplete="current-password">
+                </div>
+
+                <div id="errorMsg" class="login-error" style="display: none;"></div>
+
+                <button type="submit" id="loginBtn" class="tactical-btn btn-primary"
+                    style="height: 55px; margin-top: 10px; border-radius: 14px;">
+                    <span id="btnText">SIGN IN</span>
+                    <div id="btnSpinner" class="spinner" style="display: none; margin: 0 auto;"></div>
+                </button>
+            </form>
+
+            <div
+                style="margin-top: 40px; text-align: center; font-size: 0.6rem; color: var(--text-muted); font-weight: 900; letter-spacing: 2px; text-transform: uppercase; opacity: 0.5;">
+                TargetUp v2.5
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiService = require('../services/api.service');
+        const DeviceService = require('../services/device.service');
+        const { ipcRenderer } = require('electron');
+
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = document.getElementById('btnText');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const errorMsg = document.getElementById('errorMsg');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // UI State: Loading
+            loginBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'block';
+            errorMsg.style.display = 'none';
+
+            try {
+                const u = document.getElementById('username').value.trim();
+                const p = document.getElementById('password').value;
+
+                const res = await apiService.login(u, p);
+
+                localStorage.setItem('user', JSON.stringify(res.user));
+                localStorage.setItem('token', res.token); // Explicitly store token if not handled by interceptors
+
+                // Register Device
+                const dev = await DeviceService.getDeviceFingerprint();
+                await apiService.registerDevice(dev);
+
+                // Entrance Animation Delay
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 500);
+
+            } catch (err) {
+                errorMsg.textContent = err.message || 'Authentication Failed';
+                errorMsg.style.display = 'block';
+
+                // UI State: Reset
+                loginBtn.disabled = false;
+                btnText.style.display = 'block';
+                btnSpinner.style.display = 'none';
+            }
+        });
+
+        function minimizeToTray() { ipcRenderer.send('MINIMIZE_TO_TRAY'); }
+    </script>
+</body>
+
+</html>

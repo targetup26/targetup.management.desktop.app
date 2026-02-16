@@ -1,0 +1,28 @@
+# Node dependencies
+node_modules/
+
+# Build artifacts
+dist/
+release/
+*.exe
+*.dmg
+*.zip
+*.AppImage
+
+# Local data & configs
+userData/
+config.json
+logs/
+*.log
+
+# Environment
+.env
+*.local
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

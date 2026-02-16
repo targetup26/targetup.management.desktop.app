@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Employee Join Form - Targetup</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .form-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-section h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .form-field {
+            margin-bottom: 20px;
+        }
+
+        .form-field label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: #00C3FF;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .autosave-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: rgba(35, 165, 90, 0.2);
+            border: 1px solid #23a55a;
+            border-radius: 8px;
+            color: #23a55a;
+            font-size: 0.8rem;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .autosave-indicator.show {
+            opacity: 1;
+        }
+
+        .required-mark {
+            color: var(--accent-red);
+            margin-left: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Navigation Rail -->
+        <div class="nav-rail">
+            <div class="nav-logo">T</div>
+            <div class="nav-icon" onclick="openDashboard()" title="Dashboard">🏠</div>
+            <div class="nav-icon" onclick="openChat()" title="Chat">💬</div>
+            <div class="nav-icon active" title="Forms">📋</div>
+            <div class="nav-icon" onclick="openFiles()" title="File Management">📁</div>
+            <div style="flex: 1;"></div>
+            <div class="nav-icon" onclick="logout()" title="Log Out" style="color: var(--accent-red);">
+                🔒</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-stage glass-stage">
+            <div class="stage-header" style="height: 64px;">
+                <div class="stage-title">👤 EMPLOYEE JOIN FORM</div>
+                <div class="window-controls">
+                    <div class="dot dot-min" onclick="minimizeToTray()"></div>
+                    <div class="dot dot-close" onclick="minimizeToTray()"></div>
+                </div>
+            </div>
+
+            <div class="scroll-content" style="max-width: 900px; margin: 0 auto;">
+                <form id="joinForm">
+                    <div id="formSections">
+                        <!-- Sections will be dynamically rendered -->
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" onclick="goBack()" class="btn-secondary">
+                            ← Back to Forms
+                        </button>
+                        <button type="button" onclick="saveDraft()" class="btn-secondary">
+                            💾 Save Draft
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            ✅ Submit Form
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="autosave-indicator" id="autosaveIndicator">
+        ✓ Draft saved
+    </div>
+
+    <script src="custom-dialog.js"></script>
+    <script>
+        const formsService = require('../services/forms.service');
+        const storageService = require('../services/storage.service');
+        const apiService = require('../services/api.service');
+        const { ipcRenderer } = require('electron');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let templateId = urlParams.get('template');
+        let draftId = urlParams.get('draft');
+
+        let template = null;
+        let formData = {};
+        let autosaveTimer = null;
+
+        async function init() {
+            try {
+                if (draftId) {
+                    const submission = await formsService.getSubmission(draftId);
+                    templateId = submission.template_id;
+                    template = await formsService.getTemplate(templateId);
+                    formData = submission.form_data;
+                } else {
+                    template = await formsService.getTemplate(templateId);
+                }
+
+                await renderForm();
+
+                if (draftId) {
+                    populateFormData();
+                }
+
+                startAutosave();
+            } catch (error) {
+                console.error('Error loading form:', error);
+                await CustomDialog.alert('Failed to load form', 'Error');
+                window.location.href = 'forms.html';
+            }
+        }
+
+        function populateFormData() {
+            if (!formData) return;
+            for (const [key, value] of Object.entries(formData)) {
+                const el = document.getElementById(key);
+                if (el) {
+                    if (el.type === 'file') {
+                        // Handle file preview
+                        const valueInput = document.getElementById(`value_${key}`);
+                        if (valueInput) valueInput.value = value;
+
+                        const previewEl = document.getElementById(`preview_${key}`);
+                        if (previewEl && value) {
+                            previewEl.innerHTML = `
+                                <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                                    <span>📎</span>
+                                    <span style="font-size: 0.9rem;">Previously Uploaded</span>
+                                    <button type="button" onclick="removeFile('${key}')" style="margin-left: auto; border: none; background: none; color: var(--accent-red); cursor: pointer;">✕</button>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        el.value = value;
+                    }
+                }
+            }
+        }
+
+        async function renderForm() {
+            const container = document.getElementById('formSections');
+
+            for (const section of template.schema.sections) {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'form-section';
+                sectionDiv.innerHTML = `<h3>${section.title}</h3>`;
+
+                for (const field of section.fields) {
+                    const fieldHtml = await renderField(field);
+                    sectionDiv.innerHTML += fieldHtml;
+                }
+
+                container.appendChild(sectionDiv);
+            }
+
+            // Setup file listeners
+            setupFileListeners();
+
+            // Load dynamic options
+            await loadDynamicOptions();
+        }
+
+        async function renderField(field) {
+            const required = field.required ? '<span class="required-mark">*</span>' : '';
+            const requiredAttr = field.required ? 'required' : '';
+            const readonlyAttr = field.readonly ? 'readonly' : '';
+            const description = field.description ? `<div class="field-description" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">${field.description}</div>` : '';
+
+            let inputHtml = '';
+
+            switch (field.type) {
+                case 'file':
+                    const accept = field.name === 'cv_upload' ? '.pdf,.doc,.docx' : '';
+                    inputHtml = `
+                        <div class="file-upload-container" id="container_${field.name}">
+                            <input type="file" id="${field.name}" style="display: none;" accept="${accept}" onchange="handleFileUpload(this, '${field.name}')">
+                            <input type="hidden" name="${field.name}" id="value_${field.name}" ${requiredAttr}>
+                            <div class="file-drop-zone" onclick="document.getElementById('${field.name}').click()">
+                                <div class="upload-icon">📁</div>
+                                <div class="upload-text">Click to upload ${field.label}</div>
+                                <div class="upload-progress" id="progress_${field.name}"></div>
+                            </div>
+                            <div class="file-preview" id="preview_${field.name}"></div>
+                        </div>
+                    `;
+                    break;
+                case 'text':
+                case 'email':
+                case 'tel':
+                    inputHtml = `<input type="${field.type}" id="${field.name}" name="${field.name}" ${requiredAttr} ${readonlyAttr} ${field.pattern ? `pattern="${field.pattern}"` : ''}>`;
+                    break;
+                case 'date':
+                    inputHtml = `<input type="date" id="${field.name}" name="${field.name}" ${requiredAttr} ${readonlyAttr}>`;
+                    break;
+                case 'number':
+                    inputHtml = `<input type="number" id="${field.name}" name="${field.name}" ${requiredAttr} ${readonlyAttr}>`;
+                    break;
+                case 'select':
+                    let optionsHtml = `<option value="">-- Select ${field.label} --</option>`;
+                    if (field.options && Array.isArray(field.options)) {
+                        optionsHtml += field.options.map(opt => {
+                            const val = typeof opt === 'object' ? opt.value : opt;
+                            const label = typeof opt === 'object' ? opt.label : opt;
+                            return `<option value="${val}">${label}</option>`;
+                        }).join('');
+                    }
+                    inputHtml = `<select id="${field.name}" name="${field.name}" ${requiredAttr} ${readonlyAttr}>
+                        ${optionsHtml}
+                    </select>`;
+                    break;
+                case 'textarea':
+                    inputHtml = `<textarea id="${field.name}" name="${field.name}" ${requiredAttr} ${readonlyAttr} rows="4"></textarea>`;
+                    break;
+                default:
+                    inputHtml = `<input type="text" id="${field.name}" name="${field.name}" ${requiredAttr} ${readonlyAttr}>`;
+            }
+
+            return `
+                <div class="form-field ${field.readonly ? 'readonly' : ''}">
+                    <label for="${field.name}">${field.label}${required}</label>
+                    ${inputHtml}
+                    ${description}
+                </div>
+            `;
+        }
+
+        async function handleFileUpload(input, fieldName) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const progressEl = document.getElementById(`progress_${fieldName}`);
+            const previewEl = document.getElementById(`preview_${fieldName}`);
+            const valueInput = document.getElementById(`value_${fieldName}`);
+
+            try {
+                progressEl.style.width = '0%';
+                progressEl.textContent = '0%';
+
+                const result = await storageService.uploadFile(file, (progress) => {
+                    progressEl.style.width = `${progress}%`;
+                    progressEl.textContent = `${progress}%`;
+                });
+
+                // Success
+                valueInput.value = result.file.id; // Store ID
+                previewEl.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <span>✅</span>
+                        <span style="font-size: 0.9rem;">${file.name}</span>
+                        <button type="button" onclick="removeFile('${fieldName}')" style="margin-left: auto; border: none; background: none; color: var(--accent-red); cursor: pointer;">✕</button>
+                    </div>
+                `;
+
+                // Trigger auto-save
+                saveDraft(true);
+
+            } catch (error) {
+                console.error('Upload failed:', error);
+                await CustomDialog.alert('Upload failed: ' + error.message, 'Upload Error');
+                progressEl.style.width = '0%';
+                progressEl.textContent = '';
+            }
+        }
+
+        function removeFile(fieldName) {
+            document.getElementById(`value_${fieldName}`).value = '';
+            document.getElementById(`preview_${fieldName}`).innerHTML = '';
+            document.getElementById(`progress_${fieldName}`).style.width = '0%';
+            document.getElementById(`${fieldName}`).value = ''; // Clear file input
+        }
+
+        function setupFileListeners() {
+            // Check for drag and drop support if needed 
+        }
+
+        async function loadDynamicOptions() {
+            try {
+                // Load departments
+                const departments = await apiService.get('/departments');
+                const deptSelect = document.getElementById('department_id');
+                if (deptSelect && departments.data) {
+                    departments.data.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        deptSelect.appendChild(option);
+                    });
+                }
+
+                // Load job roles
+                const roles = await apiService.get('/job-roles');
+                const roleSelect = document.getElementById('job_role_id');
+                if (roleSelect && roles.data) {
+                    roles.data.forEach(role => {
+                        const option = document.createElement('option');
+                        option.value = role.id;
+                        option.textContent = role.title;
+                        roleSelect.appendChild(option);
+                    });
+                }
+
+                // Load marital status options
+                const maritalOptions = await formsService.getFieldOptions(templateId, 'marital_status');
+                const maritalSelect = document.getElementById('marital_status');
+                if (maritalSelect && maritalOptions) {
+                    maritalOptions.forEach(opt => {
+                        const option = document.createElement('option');
+                        option.value = opt.option_value;
+                        option.textContent = opt.option_value.charAt(0).toUpperCase() + opt.option_value.slice(1);
+                        maritalSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading options:', error);
+            }
+        }
+
+        function startAutosave() {
+            document.getElementById('joinForm').addEventListener('input', () => {
+                clearTimeout(autosaveTimer);
+                autosaveTimer = setTimeout(async () => {
+                    await saveDraft(true);
+                }, 30000); // 30 seconds
+            });
+        }
+
+        async function saveDraft(silent = false) {
+            try {
+                formData = getFormData();
+                const draft = await formsService.saveDraft(templateId, formData, draftId);
+                draftId = draft.id;
+
+                if (!silent) {
+                    showAutosaveIndicator();
+                }
+            } catch (error) {
+                console.error('Error saving draft:', error);
+                if (!silent) {
+                    await CustomDialog.alert('Failed to save draft');
+                }
+            }
+        }
+
+        async function submitForm(e) {
+            e.preventDefault();
+
+            if (!await CustomDialog.confirm('Submit this form? You will not be able to edit it after submission.', 'Confirm Submission')) {
+                return;
+            }
+
+            try {
+                formData = getFormData();
+                await formsService.submitForm(templateId, formData, draftId);
+                await CustomDialog.alert('Form submitted successfully! It will now go through the approval process.', 'Success');
+                window.location.href = 'forms.html';
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                await CustomDialog.alert('Failed to submit form: ' + (error.response?.data?.error || error.message), 'Submission Failed');
+            }
+        }
+
+        function getFormData() {
+            const form = document.getElementById('joinForm');
+            const data = {};
+            new FormData(form).forEach((value, key) => {
+                data[key] = value;
+            });
+            return data;
+        }
+
+        function showAutosaveIndicator() {
+            const indicator = document.getElementById('autosaveIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+
+        async function goBack() {
+            if (await CustomDialog.confirm('Go back? Any unsaved changes will be lost.', 'Unsaved Changes')) {
+                window.location.href = 'forms.html';
+            }
+        }
+
+        // Navigation
+        function openDashboard() { window.location.href = 'dashboard.html'; }
+        function openChat() { window.location.href = 'chat.html'; }
+        function openFiles() { window.location.href = 'files.html'; }
+        function minimizeToTray() { ipcRenderer.send('MINIMIZE_TO_TRAY'); }
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        document.getElementById('joinForm').addEventListener('submit', submitForm);
+        init();
+    </script>
+</body>
+
+</html>

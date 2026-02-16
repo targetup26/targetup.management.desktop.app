@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Leave Request Form - Targetup</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .form-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .form-section h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .form-field {
+            margin-bottom: 20px;
+        }
+
+        .form-field label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: #fff;
+            transition: all 0.2s;
+        }
+
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .balance-widget {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+            background: rgba(0, 163, 255, 0.1);
+            border: 1px solid var(--accent-blue);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .balance-item {
+            text-align: center;
+        }
+
+        .balance-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .balance-label {
+            font-size: 0.8rem;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: #000;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-weight: 700;
+            border: 1px solid var(--border-subtle);
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Navigation Rail -->
+        <div class="nav-rail">
+            <div class="nav-logo">T</div>
+            <div class="nav-icon" onclick="openDashboard()" title="Dashboard">🏠</div>
+            <div class="nav-icon" onclick="openChat()" title="Chat">💬</div>
+            <div class="nav-icon active" title="Forms">📋</div>
+            <div class="nav-icon" onclick="openFiles()" title="File Management">📁</div>
+            <div style="flex: 1;"></div>
+            <div class="nav-icon" onclick="logout()" title="Log Out" style="color: var(--accent-red);">
+                🔒</div>
+        </div>
+
+        <div class="main-stage glass-stage">
+            <div class="stage-header">
+                <div class="stage-title">🏖️ LEAVE REQUEST FORM</div>
+                <div class="window-controls">
+                    <div class="dot dot-min" onclick="minimizeToTray()"></div>
+                    <div class="dot dot-close" onclick="minimizeToTray()"></div>
+                </div>
+            </div>
+
+            <div class="scroll-content" style="max-width: 800px; margin: 0 auto;">
+                <!-- Leave Balance Widget -->
+                <div class="balance-widget" id="balanceWidget">
+                    <div class="balance-item">
+                        <div class="balance-value" id="balEntitlement">-</div>
+                        <div class="balance-label">Annual Entitlement</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="balance-value" id="balUsed">-</div>
+                        <div class="balance-label">Used Days</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="balance-value" id="balRemaining">-</div>
+                        <div class="balance-label">Remaining Balance</div>
+                    </div>
+                </div>
+
+                <form id="leaveForm">
+                    <div id="formSections"></div>
+
+                    <div class="form-actions">
+                        <button type="button" onclick="goBack()" class="btn-secondary">← Cancel</button>
+                        <button type="submit" class="btn-primary">✅ Submit Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="autosave-indicator" id="autosaveIndicator"
+        style="position: fixed; bottom: 20px; right: 20px; padding: 8px 16px; background: rgba(35, 165, 90, 0.2); border: 1px solid #23a55a; border-radius: 8px; color: #23a55a; font-size: 0.8rem; font-weight: 700; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1000;">
+        ✓ Draft saved
+    </div>
+
+    <script src="custom-dialog.js"></script>
+    <script>
+        const formsService = require('../services/forms.service');
+        const apiService = require('../services/api.service');
+        const { ipcRenderer } = require('electron');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let templateId = urlParams.get('template');
+        let draftId = urlParams.get('draft');
+
+        let template = null;
+        let profile = null;
+        let autosaveTimer = null;
+
+        async function init() {
+            try {
+                let tmpl, balance, profileData, draftData;
+
+                if (draftId) {
+                    draftData = await formsService.getSubmission(draftId);
+                    templateId = draftData.template_id;
+                    [tmpl, balance, profileData] = await Promise.all([
+                        formsService.getTemplate(templateId),
+                        formsService.getLeaveBalance(),
+                        apiService.getProfile()
+                    ]);
+                } else {
+                    [tmpl, balance, profileData] = await Promise.all([
+                        formsService.getTemplate(templateId),
+                        formsService.getLeaveBalance(),
+                        apiService.getProfile()
+                    ]);
+                }
+
+                template = tmpl;
+                // Unwrap the user object from the response (API returns { success: true, user: {...}, profile: {...} })
+                // The template auto_fill paths generally expect 'profile.employee.*' or 'user.employee.*' mappings.
+                // Since our templates use 'profile.employee...', and 'employee' is inside 'user', we set profile = profileData.user.
+                // However, we must be careful if the template expects 'profile.bio'. But Leave Form mainly needs 'employee' details.
+                profile = profileData || {};
+
+                // Update Balance Widget
+                if (balance) {
+                    document.getElementById('balEntitlement').textContent = balance.entitlement;
+                    document.getElementById('balUsed').textContent = balance.used;
+                    document.getElementById('balRemaining').textContent = balance.remaining;
+                }
+
+                await renderForm();
+
+                if (draftId && draftData) {
+                    populateFormData(draftData.form_data);
+                }
+
+                runCalculations(); // Initial calculation
+                await loadDynamicOptions();
+                startAutosave();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                await CustomDialog.alert('Failed to load form data', 'Error');
+            }
+        }
+
+        function populateFormData(formData) {
+            if (!formData) return;
+            for (const [key, value] of Object.entries(formData)) {
+                const el = document.getElementById(key);
+                if (el) {
+                    el.value = value;
+                }
+            }
+        }
+
+        async function renderForm() {
+            const container = document.getElementById('formSections');
+            container.innerHTML = template.schema.sections.map(section => `
+                <div class="form-section">
+                    <h3>${section.title}</h3>
+                    ${section.fields.map(field => renderField(field)).join('')}
+                </div>
+            `).join('');
+
+            // Double check values
+            template.schema.sections.forEach(section => {
+                section.fields.forEach(field => {
+                    const el = document.getElementById(field.name);
+                    if (el && field.auto_fill) {
+                        const val = resolveAutoFill(field.auto_fill);
+                        console.log(`📍 Final check for ${field.name}: "${val}"`);
+                        if (val && (!el.value || el.value === '')) {
+                            console.log(`⚠️ Forcing value for ${field.name}`);
+                            el.value = val;
+                        }
+                    }
+                });
+            });
+        }
+
+        function resolveAutoFill(path) {
+            if (!path || !profile) return '';
+            const parts = path.split('.');
+            let current = profile;
+
+            for (const part of parts) {
+                if (current && current[part] !== undefined) {
+                    current = current[part];
+                } else {
+                    return '';
+                }
+            }
+            return current || '';
+        }
+
+        function runCalculations() {
+            if (!template?.schema) return;
+            const fieldsWithCalc = template.schema.sections.flatMap(s => s.fields).filter(f => f.calculation);
+
+            fieldsWithCalc.forEach(field => {
+                const targetEl = document.getElementById(field.name);
+                if (!targetEl) return;
+
+                const calc = field.calculation;
+                if (calc.startsWith('years_since(')) {
+                    const sourceFieldName = calc.match(/\((.*?)\)/)[1];
+                    const sourceEl = document.getElementById(sourceFieldName);
+                    if (sourceEl && sourceEl.value) {
+                        const start = new Date(sourceEl.value);
+                        if (!isNaN(start.getTime())) {
+                            const diff = (new Date() - start) / (1000 * 60 * 60 * 24 * 365.25);
+                            targetEl.value = Math.max(0, diff).toFixed(1);
+                        }
+                    }
+                } else if (calc.startsWith('date_diff(')) {
+                    const args = calc.match(/\((.*?)\)/)[1].split(',').map(s => s.trim());
+                    const startEl = document.getElementById(args[0]);
+                    const endEl = document.getElementById(args[1]);
+
+                    if (startEl && startEl.value && endEl && endEl.value) {
+                        const start = new Date(startEl.value);
+                        const end = new Date(endEl.value);
+                        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                            const diff = (end - start) / (1000 * 60 * 60 * 24);
+                            targetEl.value = diff >= 0 ? Math.ceil(diff) + 1 : '0';
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderField(field) {
+            const requiredAttr = field.required ? 'required' : '';
+            const readonlyAttr = field.readonly ? 'readonly' : '';
+            const value = field.auto_fill ? resolveAutoFill(field.auto_fill) : '';
+            const calcAttr = field.calculation ? `data-calculation="${field.calculation}"` : '';
+
+            let inputHtml = '';
+
+            switch (field.type) {
+                case 'select':
+                    let optionsHtml = '<option value="">-- Select --</option>';
+                    if (field.options && Array.isArray(field.options)) {
+                        optionsHtml += field.options.map(opt => {
+                            const val = typeof opt === 'object' ? opt.value : opt;
+                            const label = typeof opt === 'object' ? opt.label : opt;
+                            const selected = val === value ? 'selected' : '';
+                            return `<option value="${val}" ${selected}>${label}</option>`;
+                        }).join('');
+                    }
+                    inputHtml = `<select id="${field.name}" name="${field.name}" ${requiredAttr} ${readonlyAttr} ${calcAttr}>${optionsHtml}</select>`;
+                    break;
+                case 'textarea':
+                    inputHtml = `<textarea id="${field.name}" name="${field.name}" ${requiredAttr} ${readonlyAttr} ${calcAttr} rows="4">${value}</textarea>`;
+                    break;
+                case 'date':
+                    // Ensure date is in YYYY-MM-DD format for inputs
+                    const dateVal = value ? new Date(value).toISOString().split('T')[0] : '';
+                    inputHtml = `<input type="date" id="${field.name}" name="${field.name}" value="${dateVal}" ${requiredAttr} ${readonlyAttr} ${calcAttr}>`;
+                    break;
+                default:
+                    inputHtml = `<input type="${field.type}" id="${field.name}" name="${field.name}" value="${value}" ${requiredAttr} ${readonlyAttr} ${calcAttr}>`;
+            }
+
+            return `
+                <div class="form-field ${field.readonly ? 'readonly' : ''}">
+                    <label for="${field.name}">${field.label} ${field.required ? '*' : ''}</label>
+                    ${inputHtml}
+                </div>
+            `;
+        }
+
+        async function loadDynamicOptions() {
+            const leaveTypeSelect = document.getElementById('leave_type');
+            if (leaveTypeSelect) {
+                try {
+                    const options = await formsService.getFieldOptions(templateId, 'leave_type');
+                    options.forEach(opt => {
+                        const el = document.createElement('option');
+                        el.value = opt.option_value;
+                        el.textContent = opt.option_value;
+                        leaveTypeSelect.appendChild(el);
+                    });
+                } catch (err) {
+                    console.error('Failed to load leave types');
+                }
+            }
+        }
+
+        function startAutosave() {
+            document.getElementById('leaveForm').addEventListener('input', (e) => {
+                // Trigger calculations if a source field changed
+                runCalculations();
+
+                clearTimeout(autosaveTimer);
+                autosaveTimer = setTimeout(async () => {
+                    await saveDraft(true);
+                }, 30000); // 30 seconds
+            });
+        }
+
+        async function saveDraft(silent = false) {
+            try {
+                const formData = {};
+                new FormData(document.getElementById('leaveForm')).forEach((value, key) => formData[key] = value);
+
+                const draft = await formsService.saveDraft(templateId, formData, draftId);
+                draftId = draft.id;
+
+                if (!silent) {
+                    const indicator = document.getElementById('autosaveIndicator');
+                    indicator.style.opacity = '1';
+                    setTimeout(() => indicator.style.opacity = '0', 2000);
+                }
+            } catch (error) {
+                console.error('Autosave failed:', error);
+            }
+        }
+
+        document.getElementById('leaveForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!await CustomDialog.confirm('Submit leave request?', 'Confirm Submission')) return;
+
+            const formData = {};
+            new FormData(e.target).forEach((value, key) => formData[key] = value);
+
+            try {
+                await formsService.submitForm(templateId, formData, draftId);
+                await CustomDialog.alert('Leave request submitted!', 'Success');
+                window.location.href = 'forms.html';
+            } catch (error) {
+                await CustomDialog.alert('Error: ' + error.message, 'Submission Failed');
+            }
+        });
+
+        async function goBack() {
+            if (await CustomDialog.confirm('Cancel request? Unsaved changes may be lost.', 'Cancel')) {
+                window.location.href = 'forms.html';
+            }
+        }
+        function openDashboard() { window.location.href = 'dashboard.html'; }
+        function openChat() { window.location.href = 'chat.html'; }
+        function openFiles() { window.location.href = 'files.html'; }
+        function minimizeToTray() { ipcRenderer.send('MINIMIZE_TO_TRAY'); }
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        init();
+    </script>
+</body>
+
+</html>

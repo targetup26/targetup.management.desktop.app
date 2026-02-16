@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>TargetUp- Dashboard</title>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="drag-overlay"></div>
+
+    <div class="app-container">
+        <!-- Navigation Rail -->
+        <div class="nav-rail">
+            <div class="nav-logo">S</div>
+
+            <div class="nav-icon active" title="Dashboard">🏠</div>
+            <div class="nav-icon" onclick="openChat()" title="Team Communications">💬</div>
+            <div class="nav-icon" onclick="openForms()" title="Forms">📋</div>
+            <div class="nav-icon" onclick="openFiles()" title="File Management">📁</div>
+            <div style="flex: 1;"></div>
+            <div class="nav-icon" onclick="logout()" title="Log Out" style="color: var(--accent-red);">
+                🔒</div>
+        </div>
+
+        <!-- Dashboard Context Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">Application Status</div>
+            <div class="sidebar-content">
+                <div class="sidebar-item active">
+                    <span>⚡</span>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-weight: 700; color: #fff; font-size: 0.85rem;"
+                            id="statusText">LOADING...</span>
+                        <span style="font-size: 0.7rem;" id="subStatus">Connecting...</span>
+                    </div>
+                </div>
+                <div
+                    style="margin-top: 30px; padding: 0 12px; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                    System Status Feed</div>
+                <div style="padding: 15px 12px; display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; flex-direction: column;">
+                        <span id="currentDate" style="font-size: 0.75rem; color: #fff; font-weight: 700;">JAN 17,
+                            2026</span>
+                        <span style="font-size: 0.65rem; color: var(--text-muted);">System Online</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Sidebar Section (Synchronized) -->
+            <div class="sidebar-profile" id="sidebarProfileBtn" onclick="openProfile()" style="cursor: pointer;">
+                <div class="profile-pfp" id="mainUserPfp">
+                    <!-- Avatar or Initials will be injected here -->
+                    <div class="status-dot-avatar" id="currentStatusDot"
+                        onclick="event.stopPropagation(); toggleStatusPopover(event);"></div>
+                </div>
+                <div class="profile-info">
+                    <div style="display: flex; align-items: center;">
+                        <div class="profile-name" id="mainEmployeeName">Loading User...</div>
+                        <div id="userBadgeContainer"></div>
+                    </div>
+                    <div class="profile-custom-status" id="userCustomStatusPlate"></div>
+                </div>
+                <div class="logout-trigger" onclick="logout(); event.stopPropagation();" title="Log Out">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </div>
+            </div>
+
+            <div
+                style="padding: 20px; border-top: 1px solid var(--border-subtle); font-size: 0.6rem; color: var(--text-muted); letter-spacing: 1px;">
+                v1.2.6
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-stage glass-stage">
+            <div class="stage-header" style="height: 64px;">
+                <div class="stage-title">DASHBOARD</div>
+                <div class="window-controls">
+                    <div class="control-btn" onclick="minimizeToTray()">&#8211;</div>
+                    <div class="control-btn control-close" onclick="minimizeToTray()">&times;</div>
+                </div>
+            </div>
+
+
+            <!-- Status Popover -->
+            <div id="statusPopover" class="status-popover">
+                <div class="status-option" onclick="setUserStatus('available')">
+                    <div class="status-option-dot available"></div> Online
+                </div>
+                <div class="status-option" onclick="setUserStatus('idle')">
+                    <div class="status-option-dot idle"></div> Idle
+                </div>
+                <div class="status-option" onclick="setUserStatus('busy')">
+                    <div class="status-option-dot busy"></div> Working
+                </div>
+                <div style="height: 1px; background: var(--border-subtle); margin: 4px 0;"></div>
+                <div class="status-option" onclick="openProfile()">
+                    <span style="font-size: 1rem; margin-right: 5px;">⚙️</span> Profile Settings
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Clock Card -->
+                <div class="pro-card">
+                    <div class="card-title">Current Time</div>
+                    <div id="clock" class="clock-large">00:00:00</div>
+                    <p id="ampm"
+                        style="color: var(--accent-blue); font-weight: 800; letter-spacing: 2px; font-size: 0.65rem; margin-top: 5px; text-transform: uppercase;">
+                        Connected</p>
+                </div>
+
+                <!-- Session Control Card -->
+                <div class="pro-card action">
+                    <div class="card-title">Attendance</div>
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <button id="mainBtn" class="tactical-btn btn-primary" onclick="onMainButtonClick()"
+                            style="height: 64px; border-radius: 18px;">
+                            <span id="btnText">CHECK IN</span>
+                            <div id="spinner" class="spinner" style="display: none;"></div>
+                        </button>
+
+                        <div id="actionGrid" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <button id="breakBtn" class="tactical-btn btn-outline" onclick="toggleBreak()"
+                                style="color: var(--accent-orange); border-radius: 18px; border-color: rgba(255, 171, 0, 0.2);">
+                                <span id="breakBtnText">BREAK IN</span>
+                                <span id="breakTimer"
+                                    style="font-size: 0.75rem; color: #fff; font-weight: 700; display: none; margin-left: 8px;">00:00</span>
+                            </button>
+                            <button id="checkOutBtn" class="tactical-btn btn-outline" onclick="checkOut()"
+                                style="color: var(--accent-red); border-radius: 18px; border-color: rgba(255, 77, 77, 0.2);">
+                                <span>CHECK OUT</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comms Summary Card -->
+                <div class="pro-card"
+                    style="grid-column: span 2; cursor: pointer; background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);"
+                    onclick="openChat()">
+                    <div class="card-title">Communication</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div class="nav-logo"
+                                style="margin: 0; width: 44px; height: 44px; font-size: 1.2rem; border-radius: 12px; background: rgba(0, 163, 255, 0.1); color: var(--accent-blue); box-shadow: none; border: 1px solid rgba(0, 163, 255, 0.2);">
+                                💬
+                            </div>
+                            <div>
+                                <h4 style="font-size: 1rem; font-weight: 900; color: #fff; letter-spacing: -0.5px;">
+                                    Team Chat</h4>
+                                <p style="font-size: 0.75rem; color: var(--text-secondary); letter-spacing: 0.5px;">
+                                    Connect with your team.</p>
+                            </div>
+                        </div>
+                        <div
+                            style="color: var(--accent-blue); font-weight: 900; letter-spacing: 1px; font-size: 0.8rem;">
+                            OPEN CHAT ➔</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Overlays -->
+        <div id="modalOverlay" class="modal-overlay">
+            <div class="modal-content">
+                <div id="modalIcon" class="modal-icon">✅</div>
+                <h3 id="modalTitle" class="modal-title">NOTIFICATION</h3>
+                <p id="modalMessage" class="modal-desc"></p>
+                <button class="tactical-btn btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script>
+        // CRITICAL: Global Error Handler & Safety Init at TOP
+        window.onerror = function (message, source, lineno, colno, error) {
+            console.error('Global Error:', message, error);
+            document.body.style.opacity = '1'; // Force show on error
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:red; padding:20px; z-index:9999; overflow:auto; font-family:monospace;';
+            errDiv.innerHTML = `<h3>Untrapped Error</h3><pre>${message}\n${source}:${lineno}:${colno}\n${error?.stack || ''}</pre><button onclick="this.parentElement.remove()" style="padding:10px; background:#333; color:#fff; border:1px solid #555; margin-top:10px; cursor:pointer;">Dismiss</button>`;
+            document.body.appendChild(errDiv);
+            return false;
+        };
+
+        // Safety timeout to ensure window shows even if script hangs
+        setTimeout(() => {
+            document.body.style.opacity = '1';
+            const loader = document.getElementById('statusText');
+            if (loader && loader.textContent === 'LOADING...') {
+                loader.textContent = 'READY (Safe Mode)';
+                document.getElementById('subStatus').textContent = 'System Online';
+            }
+        }, 3000); // 3 seconds timeout
+
+        const apiService = require('../services/api.service');
+        const DeviceService = require('../services/device.service');
+        const { ipcRenderer, shell } = require('electron');
+
+        // UI Elements
+        const statusTextEl = document.getElementById('statusText');
+        const subStatusEl = document.getElementById('subStatus');
+
+        // References
+        const mainBtn = document.getElementById('mainBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const clockEl = document.getElementById('clock');
+        const ampmEl = document.getElementById('ampm');
+        const dateEl = document.getElementById('currentDate');
+        const breakBtn = document.getElementById('breakBtn');
+        const breakBtnText = document.getElementById('breakBtnText');
+        const breakTimerEl = document.getElementById('breakTimer');
+        const actionGrid = document.getElementById('actionGrid');
+        const mainEmployeeName = document.getElementById('mainEmployeeName');
+        const mainUserPfp = document.getElementById('mainUserPfp');
+
+        let currentStatus = 'OFF_DUTY';
+        let isOnBreak = false;
+        let breakInterval = null;
+
+        function updateClock() {
+            const now = new Date();
+            clockEl.textContent = now.toLocaleTimeString([], { hour12: false });
+            ampmEl.textContent = `SYSTEM ONLINE [${now.getHours() >= 12 ? 'PM' : 'AM'}]`;
+
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            dateEl.textContent = now.toLocaleDateString('en-US', options).toUpperCase();
+        }
+
+        async function init() {
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const user = JSON.parse(userStr);
+
+            // Check if user is Admin - Bypass onboarding check
+            const isAdmin = user.roles?.some(role => ['ADMIN', 'SUPER_ADMIN', 'HR_ADMIN'].includes(role));
+
+            if (!isAdmin && user.onboarding_status !== 'APPROVED') {
+                // Check if they have an approved submission via API to be sure
+                try {
+                    const status = await apiService.getAttendanceStatus();
+                } catch (err) {
+                    if (err.message.includes('ONBOARDING_REQUIRED')) {
+                        window.location.href = 'join-form.html?template=1'; // Hard-coded template 1 for now
+                        return;
+                    }
+                }
+            }
+            const displayName = user.full_name || user.username;
+            // sidebarEmployeeName.textContent = displayName; // Removed
+            mainEmployeeName.textContent = displayName;
+            sessionStorage.setItem('userName', displayName);
+            sessionStorage.setItem('userId', user.id);
+            sessionStorage.setItem('userRole', user.role || 'EMPLOYEE');
+
+            // Get full profile/presence for correct sidebar state
+            try {
+                const profileData = await apiService.getProfile();
+                updateSidebarDisplay(profileData);
+            } catch (err) {
+                console.warn('Profile sync failed:', err);
+                // Fallback to initials
+                const initials = displayName[0].toUpperCase();
+                // sidebarUserPfp.textContent = initials; // Removed
+                mainUserPfp.textContent = initials;
+            }
+
+            // [NEW] Get initial attendance status
+            try {
+                const deviceInfo = await DeviceService.getDeviceFingerprint();
+                const ip = await DeviceService.getCurrentIP();
+                const statusResponse = await apiService.getAttendanceStatus();
+                updateState(statusResponse);
+
+                // Periodic state refresh every 60 seconds to catch external changes
+                setInterval(async () => {
+                    try {
+                        const refreshedStatus = await apiService.getAttendanceStatus();
+                        updateState(refreshedStatus);
+                    } catch (err) {
+                        console.warn('State refresh failed:', err);
+                    }
+                }, 60000); // 60 seconds
+            } catch (err) {
+                console.error('Link failure:', err);
+                statusTextEl.textContent = 'OFFLINE';
+                subStatusEl.textContent = err.message;
+            }
+        }
+
+        function updateState(statusData) {
+            // Support both string (legacy/internal) and object (API response) formats
+            const status = (typeof statusData === 'string') ? statusData : (statusData.status || 'OFF_DUTY');
+            const activeBreak = statusData.active_break;
+
+            currentStatus = status;
+            const isCheckedIn = (status === 'PRESENT' || status === 'ON_BREAK' || status === 'LATE');
+            isOnBreak = (status === 'ON_BREAK');
+
+            if (isCheckedIn) {
+                mainBtn.style.display = 'none';
+                actionGrid.style.display = 'grid';
+                statusTextEl.textContent = isOnBreak ? 'ON BREAK' : 'WORKING';
+                subStatusEl.textContent = isOnBreak ? 'On Break' : 'Time tracking active';
+
+                if (isOnBreak) {
+                    breakBtnText.textContent = 'BREAK OUT';
+                    let initialSeconds = 0;
+                    if (activeBreak && activeBreak.start_time) {
+                        const startTime = new Date(activeBreak.start_time).getTime();
+                        const now = new Date().getTime();
+                        initialSeconds = Math.floor((now - startTime) / 1000);
+                    }
+                    startBreakTimer(initialSeconds);
+                } else {
+                    breakBtnText.textContent = 'BREAK IN';
+                    stopBreakTimer();
+                }
+            } else {
+                mainBtn.style.display = 'flex';
+                actionGrid.style.display = 'none';
+                statusTextEl.textContent = 'INACTIVE';
+                subStatusEl.textContent = 'Ready to check in';
+                stopBreakTimer();
+            }
+        }
+
+        async function onMainButtonClick() {
+            setLoading(true);
+            try {
+                const deviceInfo = await DeviceService.getDeviceFingerprint();
+                const ip = await DeviceService.getCurrentIP();
+                await apiService.checkIn(deviceInfo.device_fingerprint, ip);
+                // Re-fetch state from backend to ensure accuracy
+                const statusResponse = await apiService.getAttendanceStatus();
+                updateState(statusResponse);
+                showToast('CHECKED IN', 'You are now checked in.');
+            } catch (err) {
+                showModal('CHECK IN FAILED', err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function checkOut() {
+            setLoading(true);
+            try {
+                const deviceInfo = await DeviceService.getDeviceFingerprint();
+                const ip = await DeviceService.getCurrentIP();
+                await apiService.checkOut(deviceInfo.device_fingerprint, ip);
+                // Re-fetch state from backend to ensure accuracy
+                const statusResponse = await apiService.getAttendanceStatus();
+                updateState(statusResponse);
+                showToast('CHECKED OUT', 'You have checked out.');
+            } catch (err) {
+                showModal('ERROR', err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function toggleBreak() {
+            setLoading(true);
+            try {
+                if (isOnBreak) {
+                    const response = await apiService.endBreak();
+                    // Re-fetch state from backend to ensure accuracy
+                    const statusResponse = await apiService.getAttendanceStatus();
+                    updateState(statusResponse);
+
+                    // Show break duration in toast
+                    const duration = response.duration || 0;
+                    const hours = Math.floor(duration / 60);
+                    const mins = duration % 60;
+                    const durationText = hours > 0 ? `${hours}h ${mins}m` : `${mins} minutes`;
+                    showToast('BREAK ENDED', `Break duration: ${durationText}`);
+                } else {
+                    await apiService.startBreak();
+                    // Re-fetch state from backend to ensure accuracy
+                    const statusResponse = await apiService.getAttendanceStatus();
+                    updateState(statusResponse);
+                    showToast('BREAK STARTED', 'Your break has been logged.');
+                }
+            } catch (err) {
+                showModal('ERROR', err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(loading) {
+            spinner.style.display = loading ? 'block' : 'none';
+            btnText.style.display = loading ? 'none' : 'block';
+            mainBtn.disabled = loading;
+        }
+
+        function startBreakTimer(initialSeconds = 0) {
+            breakTimerEl.style.display = 'inline';
+            let seconds = initialSeconds;
+
+            // Initial render
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            breakTimerEl.textContent = `${mins}:${secs}`;
+
+            if (breakInterval) clearInterval(breakInterval);
+            breakInterval = setInterval(() => {
+                seconds++;
+                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const secs = (seconds % 60).toString().padStart(2, '0');
+                breakTimerEl.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function stopBreakTimer() {
+            if (breakInterval) clearInterval(breakInterval);
+            breakTimerEl.style.display = 'none';
+        }
+
+        function showToast(title, msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<strong>${title}</strong>: ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        function showModal(title, msg, icon = '⚡') {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('modalIcon').textContent = icon;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        function updateSidebarDisplay(data) {
+            const user = data.user;
+            const profile = data.profile;
+            const presence = data.presence;
+
+            const displayName = user.full_name || user.username;
+            mainEmployeeName.textContent = displayName;
+
+            // Avatar or Initials
+            if (profile.avatar_url) {
+                const avatarSrc = apiService.getStorageUrl(profile.avatar_url);
+
+                // Update Main PFP (preserving status dot)
+                Array.from(mainUserPfp.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE || node.tagName === 'IMG') node.remove();
+                });
+                const img2 = document.createElement('img');
+                img2.src = avatarSrc;
+                img2.style.cssText = "width:100%; height:100%; object-fit:cover; border-radius:50%;";
+                img2.onerror = () => {
+                    // Fallback to initials if avatar fails to load
+                    img2.remove();
+                    const initials = displayName[0].toUpperCase();
+                    Array.from(mainUserPfp.childNodes).forEach(node => {
+                        if (node.nodeType === Node.TEXT_NODE) node.remove();
+                    });
+                    mainUserPfp.prepend(document.createTextNode(initials));
+                };
+                mainUserPfp.prepend(img2);
+            } else {
+                const initials = displayName[0].toUpperCase();
+                // Preserve status dot in mainUserPfp
+                Array.from(mainUserPfp.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE || node.tagName === 'IMG') node.remove();
+                });
+                mainUserPfp.prepend(document.createTextNode(initials));
+            }
+
+            // Status Dot
+            const dot = document.getElementById('currentStatusDot');
+            if (dot) dot.className = 'status-dot-avatar ' + (presence.status || 'available');
+
+            // Badges
+            const badgeContainer = document.getElementById('userBadgeContainer');
+            if (badgeContainer) {
+                badgeContainer.innerHTML = '';
+                if (user.role === 'ADMIN') badgeContainer.innerHTML = '<span class="badge-role">ADMIN</span>';
+                if (displayName.toLowerCase().includes('mandour') || user.role === 'ADMIN') {
+                    badgeContainer.innerHTML += '<span class="badge-role" style="background: #5865f2;">CODE</span>';
+                }
+            }
+
+            // Custom Status
+            const bio = profile.bio || '';
+            const statusMsg = bio.includes('|||') ? bio.split('|||')[0].trim() : '';
+            const customStatusPlate = document.getElementById('userCustomStatusPlate');
+            if (customStatusPlate) {
+                customStatusPlate.textContent = statusMsg;
+                customStatusPlate.style.display = statusMsg ? 'block' : 'none';
+            }
+        }
+
+        async function selectStatus(status) {
+            currentStatus = status;
+            document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+            const statusBtn = document.getElementById(`status-${status}`);
+            if (statusBtn) statusBtn.classList.add('active');
+        }
+
+        function toggleStatusPopover(event) {
+            event.stopPropagation();
+            const popover = document.getElementById('statusPopover');
+            if (popover) popover.classList.toggle('visible');
+        }
+
+        async function setUserStatus(status) {
+            try {
+                currentStatus = status;
+                await apiService.updatePresence({ status });
+                const popover = document.getElementById('statusPopover');
+                if (popover) popover.classList.remove('visible');
+                updateSidebarProfile();
+                showToast('STATUS UPDATED', `Presence set to ${status.toUpperCase()}`);
+            } catch (err) {
+                console.error('Status Error:', err);
+            }
+        }
+
+        function updateSidebarProfile() {
+            if (!currentUser) return;
+            const namePlate = document.getElementById('userNamePlate');
+            const customStatusPlate = document.getElementById('userCustomStatusPlate');
+            const badgeContainer = document.getElementById('userBadgeContainer');
+            const initialsEl = document.getElementById('userInitials');
+            const dot = document.getElementById('currentStatusDot');
+
+            if (namePlate) namePlate.textContent = currentUser.full_name || currentUser.name || 'User';
+            if (dot) dot.className = 'status-dot-avatar ' + (currentStatus || 'available');
+
+            // Set initials
+            const initials = (currentUser.full_name || currentUser.name || 'User').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            if (initialsEl) {
+                let found = false;
+                for (const node of initialsEl.childNodes) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        node.textContent = initials + ' ';
+                        found = true; break;
+                    }
+                }
+                if (!found) initialsEl.prepend(document.createTextNode(initials + ' '));
+            }
+
+            // Badges
+            if (badgeContainer) {
+                badgeContainer.innerHTML = '';
+                if (currentUser.role === 'ADMIN') badgeContainer.innerHTML = '<span class="badge-role">ADMIN</span>';
+            }
+        }
+
+        function openProfile() {
+            // Redirect to chat for full profile management as dashboard lacks the large modal structure
+            window.location.href = 'chat.html?openProfile=true';
+        }
+
+        // Close popover on click outside
+        document.addEventListener('click', () => {
+            const popover = document.getElementById('statusPopover');
+            if (popover) popover.classList.remove('visible');
+        });
+
+        function logout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        function openChat() { window.location.href = 'chat.html'; }
+        function openForms() { window.location.href = 'forms.html'; }
+        function openFiles() { window.location.href = 'files.html'; }
+
+        // Wrap init in try-catch
+        (async () => {
+            try {
+                await init();
+
+                // Check admin access (commented out as per requirement)
+                // const user = JSON.parse(localStorage.getItem('user') || '{}');
+                // if (user.role === 'ADMIN') { ... }
+            } catch (err) {
+                console.error('Init failed:', err);
+                const errDiv = document.createElement('div');
+                errDiv.style.cssText = 'position:fixed; top:20px; right:20px; background:#330000; color:#ffaaaa; padding:15px; border-radius:8px; border:1px solid #ff0000; z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.5); font-family:sans-serif; font-size:12px; max-width:300px;';
+                errDiv.innerHTML = `<strong>Initialization Warning</strong><br>${err.message}<br><button onclick="this.parentElement.remove()" style="margin-top:8px; background:rgba(255,255,255,0.1); border:none; color:#fff; padding:4px 8px; border-radius:4px; cursor:pointer;">Dismiss</button>`;
+                document.body.appendChild(errDiv);
+            }
+        })();
+
+    </script>
+</body>
+
+</html>

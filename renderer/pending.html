@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Targetup - Device Approval</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="drag-overlay"></div>
+
+    <div class="login-stage">
+        <div class="login-auth-card" style="text-align: center;">
+            <div
+                style="width: 80px; height: 80px; margin: 0 auto 30px auto; border-radius: 50%; background: rgba(245, 158, 11, 0.05); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.1);">
+                <div class="spinner" style="width: 40px; height: 40px; border-top-color: var(--accent-orange);"></div>
+            </div>
+
+            <h1 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">Device Approval Pending</h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 30px; line-height: 1.6;">
+                Your device has been registered.<br>Awaiting HR authorization to access the system.
+            </p>
+
+            <button class="tactical-btn btn-outline" onclick="window.location.href='login.html'">
+                <span>← Back to Login</span>
+            </button>
+
+            <div style="margin-top: 40px; font-size: 0.65rem; color: var(--text-muted); letter-spacing: 2px;">
+                STATUS: PENDING_APPROVAL
+            </div>
+        </div>
+
+        <div class="window-controls" style="position: absolute; top: 15px; right: 15px;">
+            <div class="dot dot-close" onclick="minimizeToTray()"></div>
+        </div>
+    </div>
+
+    <script>
+        const apiService = require('../services/api.service');
+        const DeviceService = require('../services/device.service');
+        const { ipcRenderer } = require('electron');
+
+        async function checkApproval() {
+            try {
+                const deviceInfo = await DeviceService.getDeviceFingerprint();
+                const registerResponse = await apiService.registerDevice(deviceInfo);
+
+                if (registerResponse.status === 'APPROVED') {
+                    sessionStorage.setItem('deviceInfo', JSON.stringify(deviceInfo));
+                    const userStr = localStorage.getItem('user');
+                    if (userStr) {
+                        const user = JSON.parse(userStr);
+                        sessionStorage.setItem('userName', user.full_name || user.username);
+                        sessionStorage.setItem('userId', user.id);
+                    }
+                    window.location.href = 'dashboard.html';
+                }
+            } catch (e) {
+                console.error('Polling failure:', e);
+            }
+        }
+
+        function minimizeToTray() { ipcRenderer.send('MINIMIZE_TO_TRAY'); }
+
+        setInterval(checkApproval, 5000);
+        checkApproval();
+    </script>
+</body>
+
+</html>

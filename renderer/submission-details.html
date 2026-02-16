@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Intel Detail - TargetUP</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .details-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        .details-card {
+            background: linear-gradient(145deg, rgba(21, 25, 28, 0.4), rgba(11, 14, 18, 0.6));
+            border: 1px solid var(--border-subtle);
+            backdrop-filter: var(--glass-blur);
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-pro);
+        }
+
+        .details-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--accent-blue), transparent);
+            opacity: 0.6;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-top: 25px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 5px;
+            bottom: 5px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -35px;
+            top: 2px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px solid var(--bg-surface);
+            z-index: 2;
+        }
+
+        .timeline-item.completed::before {
+            background: var(--accent-emerald);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .timeline-item.active::before {
+            background: var(--accent-blue);
+            box-shadow: 0 0 15px rgba(0, 163, 255, 0.4);
+        }
+
+        .timeline-role {
+            font-size: 0.7rem;
+            font-weight: 900;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+        }
+
+        .timeline-status {
+            font-size: 0.95rem;
+            color: #fff;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+
+        .timeline-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+            opacity: 0.7;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .data-label {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .data-value {
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .btn-sign {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, #001AFF 100%);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            box-shadow: 0 10px 20px rgba(0, 163, 255, 0.2);
+            transition: all 0.3s var(--ease-pro);
+        }
+
+        .btn-sign:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0, 163, 255, 0.3);
+            filter: brightness(1.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="drag-overlay"></div>
+    <div class="app-container">
+        <!-- Navigation Rail -->
+        <div class="nav-rail">
+            <div class="nav-logo">T</div>
+            <div class="nav-icon" onclick="openDashboard()" title="Dashboard">🏠</div>
+            <div class="nav-icon" onclick="openChat()" title="Team Communications">💬</div>
+            <div class="nav-icon active" title="Forms">📋</div>
+            <div class="nav-icon" onclick="openFiles()" title="File Management">📁</div>
+            <div style="flex: 1;"></div>
+            <div class="nav-icon" onclick="logout()" title="Secure Session Terminate" style="color: var(--accent-red);">
+                🔒</div>
+        </div>
+
+        <div class="main-stage glass-stage">
+            <div class="stage-header" style="height: 64px;">
+                <div class="stage-title" id="pageTitle">INTEL SUBMISSION DETAILS</div>
+                <div class="window-controls">
+                    <div class="control-btn" onclick="minimizeToTray()">&#8211;</div>
+                    <div class="control-btn control-close" onclick="minimizeToTray()">&times;</div>
+                </div>
+            </div>
+
+            <div class="scroll-content" style="padding: 30px;">
+                <button class="tactical-btn btn-outline" onclick="goBack()"
+                    style="margin-bottom: 30px; width: auto; padding: 10px 20px; font-size: 0.7rem; border-radius: 10px; border-color: rgba(255, 255, 255, 0.1);">
+                    ← RETURN TO HUB
+                </button>
+
+                <div class="details-container">
+                    <!-- Form Data -->
+                    <div class="details-card">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
+                            <div style="width: 4px; height: 18px; background: var(--accent-blue); border-radius: 2px;">
+                            </div>
+                            <h3
+                                style="font-size: 1rem; font-weight: 900; color: #fff; letter-spacing: 1px; text-transform: uppercase;">
+                                Submission Matrix</h3>
+                        </div>
+                        <div id="formDataContainer">Loading encrypted data...</div>
+                    </div>
+
+                    <!-- Approval Timeline -->
+                    <div class="details-card">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
+                            <div
+                                style="width: 4px; height: 18px; background: var(--accent-emerald); border-radius: 2px;">
+                            </div>
+                            <h3
+                                style="font-size: 1rem; font-weight: 900; color: #fff; letter-spacing: 1px; text-transform: uppercase;">
+                                Chain of Command</h3>
+                        </div>
+                        <div class="timeline" id="timelineContainer"></div>
+
+                        <div id="actionArea"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const formsService = require('../services/forms.service');
+        const socketService = require('../services/socket.service');
+        const { ipcRenderer } = require('electron');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const submissionId = urlParams.get('id');
+        let submission = null;
+
+        async function init() {
+            try {
+                submission = await formsService.getSubmission(submissionId);
+                renderDetails();
+
+                // Setup Socket Listener
+                socketService.connect();
+                socketService.on('form_updated', (data) => {
+                    if (data.id == submissionId) {
+                        console.log('Real-time submission update received');
+                        init(); // Reload all data
+                    }
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to load submission');
+            }
+        }
+
+        function renderDetails() {
+            document.getElementById('pageTitle').textContent = `${submission.Template.name} #${submission.id}`;
+
+            // Add Edit Button if Draft
+            if (submission.status === 'draft') {
+                const header = document.querySelector('.details-card h3');
+                if (header) {
+                    header.style.display = 'flex';
+                    header.style.justifyContent = 'space-between';
+                    header.style.alignItems = 'center';
+                    header.innerHTML += `
+                        <button onclick="editSubmission(${submission.id}, '${submission.Template.type}')" 
+                                style="font-size: 0.8rem; padding: 4px 12px; background: var(--accent-emerald); border: none; border-radius: 6px; color: #000; font-weight: 700; cursor: pointer;">
+                            Resume Editing
+                        </button>
+                    `;
+                }
+            }
+
+            // Render Form Data
+            const container = document.getElementById('formDataContainer');
+            let html = '';
+            for (const [key, value] of Object.entries(submission.form_data)) {
+                if (key.includes('_id')) continue; // Skip IDs
+
+                let displayValue = value;
+                // If value looks like a UUID (e.g. for files), check if it matches an attachment
+                const attachment = submission.Attachments?.find(a => a.file_metadata_id === value);
+                if (attachment) {
+                    const downloadUrl = formsService.getDownloadUrl(value);
+                    displayValue = `<a href="#" onclick="openAttachment('${downloadUrl}')" style="color: var(--accent-blue);">📎 View Attachment</a>`;
+                }
+
+                html += `
+                    <div class="data-row">
+                        <span class="data-label">${key.replace(/_/g, ' ').toUpperCase()}</span>
+                        <span class="data-value">${displayValue}</span>
+                    </div>
+                `;
+            }
+
+            // Also show attachments that might not be in form_data keys (if any)
+            if (submission.Attachments && submission.Attachments.length > 0) {
+                html += `<h4 style="margin: 20px 0 10px; color: var(--text-muted); font-size: 0.8rem;">ATTACHMENTS</h4>`;
+                submission.Attachments.forEach(att => {
+                    const downloadUrl = formsService.getDownloadUrl(att.file_metadata_id);
+                    html += `
+                        <div class="data-row">
+                            <span class="data-label">${att.field_name?.replace(/_/g, ' ').toUpperCase() || 'FILE'}</span>
+                            <span class="data-value"><a href="#" onclick="openAttachment('${downloadUrl}')" style="color: var(--accent-blue);">Download</a></span>
+                        </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = html;
+
+            // Render Timeline
+            const timeline = document.getElementById('timelineContainer');
+            const signatures = submission.Signatures || [];
+
+            // Define complete workflow steps (even if not yet created)
+            const steps = [
+                { role: 'EMPLOYEE', label: 'Employee Submission' },
+                { role: 'DEPT_MANAGER', label: 'Dept. Manager Approval' },
+                { role: 'HR_DIRECTOR', label: 'HR Director Approval' },
+                { role: 'COO', label: 'COO Final Approval' }
+            ];
+
+            timeline.innerHTML = steps.map(step => {
+                const sig = signatures.find(s => s.signer_role === step.role);
+                let statusClass = '';
+                let statusText = 'Pending';
+                let metaText = '';
+
+                if (sig) {
+                    if (sig.status === 'signed') {
+                        statusClass = 'completed';
+                        // If signed by Admin/System but role was Manager, show override
+                        const isSystemOverride = sig.comments?.includes('Administrative Override');
+                        statusText = isSystemOverride ? 'Authorized by System Override' : `Signed by ${sig.Signer?.full_name || 'User'}`;
+                        metaText = new Date(sig.signed_at).toLocaleString();
+                    } else if (sig.status === 'pending') {
+                        // If submission is globally approved/rejected, these are effectively resolved/bypassed
+                        if (submission.status === 'approved') {
+                            statusClass = 'completed';
+                            statusText = 'Resolved by System Override';
+                            metaText = 'Administrative Bypass';
+                        } else if (submission.status === 'rejected') {
+                            statusClass = 'completed'; // or error style
+                            statusText = 'Terminated by Rejection';
+                            metaText = 'Process Halted';
+                        } else {
+                            statusClass = 'active';
+                            statusText = 'Awaiting Signature';
+                        }
+                    } else if (sig.status === 'declined') {
+                        statusClass = 'error'; // ensure css supports this or use completed with red color
+                        statusText = 'Declined';
+                        metaText = new Date(sig.signed_at).toLocaleString();
+                    }
+                } else {
+                    // Check if global status overrides missing steps
+                    if (submission.status === 'approved') {
+                        statusClass = 'completed';
+                        statusText = 'Resolved by System Override';
+                    } else if (submission.status === 'rejected') {
+                        statusText = 'Process Terminated';
+                    } else {
+                        statusText = 'Waiting for previous step';
+                    }
+                }
+
+                return `
+                    <div class="timeline-item ${statusClass}">
+                        <div class="timeline-role">${step.label}</div>
+                        <div class="timeline-status">${statusText}</div>
+                        <div class="timeline-meta">${metaText}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Render Action Button (Strict Permission Check)
+            const pendingSig = signatures.find(s => s.status === 'pending');
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const userPermissions = currentUser.permissions || [];
+
+            if (pendingSig && submission.status !== 'approved') {
+                const requiredPermission = `forms.sign.${pendingSig.signer_role.toLowerCase().replace('_', '.')}`;
+                const hasPermission = userPermissions.includes(requiredPermission);
+
+                if (hasPermission) {
+                    document.getElementById('actionArea').innerHTML = `
+                        <button class="btn-sign" onclick="signForm()">
+                            ✍️ Sign as ${pendingSig.signer_role.replace('_', ' ')}
+                        </button>
+                    `;
+                } else {
+                    document.getElementById('actionArea').innerHTML = `
+                        <div style="text-align:center; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px dashed rgba(255, 255, 255, 0.1);">
+                            <p style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:0;">
+                                Authorization Required
+                            </p>
+                            <p style="font-size:0.65rem; color:var(--text-secondary); margin-top:5px;">
+                                You do not have the required role to sign at this stage.
+                            </p>
+                        </div>
+                    `;
+                }
+            } else {
+                document.getElementById('actionArea').innerHTML = '';
+            }
+        }
+
+        async function signForm() {
+            if (!confirm('Digitally sign this form?')) return;
+            try {
+                await formsService.signForm(submissionId, 'Approved via Desktop App');
+                alert('Signed successfully!');
+                location.reload();
+            } catch (error) {
+                alert('Sign Error: ' + error.message);
+            }
+        }
+
+        function goBack() { window.location.href = 'forms.html'; }
+
+        function editSubmission(id, type) {
+            if (type === 'join') {
+                window.location.href = `join-form.html?draft=${id}`;
+            } else if (type === 'leave') {
+                window.location.href = `leave-form.html?draft=${id}`;
+            }
+        }
+
+        function openDashboard() { window.location.href = 'dashboard.html'; }
+        function openChat() { window.location.href = 'chat.html'; }
+        function openFiles() { window.location.href = 'files.html'; }
+        function openAttachment(url) { require('electron').shell.openExternal(url); }
+        function minimizeToTray() { ipcRenderer.send('MINIMIZE_TO_TRAY'); }
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        init();
+    </script>
+</body>
+
+</html>
