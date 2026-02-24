@@ -5,9 +5,10 @@ const os = require('os');
 class DeviceService {
     static async getDeviceFingerprint() {
         try {
-            const machineGUID = await this.getMachineGUID();
-            const diskSerial = await this.getDiskSerial();
-            const macAddress = await this.getMACAddress();
+            const machineGUID = await this.getMachineGUID().catch(() => 'UNKNOWN-GUID');
+            const diskSerial = await this.getDiskSerial().catch(() => 'UNKNOWN-SERIAL');
+            const macAddress = this.getMACAddress(); // sync method
+            const currentIp = await this.getCurrentIP();
 
             // Create hash from all components
             const fingerprint = crypto
@@ -18,6 +19,8 @@ class DeviceService {
             return {
                 device_fingerprint: fingerprint,
                 mac_address: macAddress,
+                ip_address: currentIp,
+                name: os.hostname(), // Use hostname as the device name for the backend
                 machine_info: {
                     hostname: os.hostname(),
                     platform: os.platform(),
@@ -26,7 +29,14 @@ class DeviceService {
             };
         } catch (error) {
             console.error('Error generating device fingerprint:', error);
-            throw error;
+            // Fallback object to ensure registration doesn't 500
+            return {
+                device_fingerprint: 'FALLBACK-' + Date.now(),
+                mac_address: this.getMACAddress(),
+                ip_address: await this.getCurrentIP(),
+                name: os.hostname(),
+                machine_info: { platform: os.platform() }
+            };
         }
     }
 

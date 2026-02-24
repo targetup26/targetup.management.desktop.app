@@ -80,11 +80,23 @@
                 const res = await apiService.login(u, p);
 
                 localStorage.setItem('user', JSON.stringify(res.user));
-                localStorage.setItem('token', res.token); // Explicitly store token if not handled by interceptors
+                localStorage.setItem('token', res.token);
 
                 // Register Device
                 const dev = await DeviceService.getDeviceFingerprint();
-                await apiService.registerDevice(dev);
+                try {
+                    await apiService.registerDevice(dev);
+                } catch (deviceErr) {
+                    // Device is linked to another account — block login and show clear message
+                    if (deviceErr.message && deviceErr.message.includes('linked to another account')) {
+                        apiService.clearToken();
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
+                        throw new Error('⚠️ This device is already linked to another account. Contact your administrator.');
+                    }
+                    // Non-critical device errors — log and continue
+                    console.warn('Device registration warning:', deviceErr.message);
+                }
 
                 // Entrance Animation Delay
                 setTimeout(() => {
@@ -101,6 +113,7 @@
                 btnSpinner.style.display = 'none';
             }
         });
+
 
         function minimizeToTray() { ipcRenderer.send('MINIMIZE_TO_TRAY'); }
     </script>
