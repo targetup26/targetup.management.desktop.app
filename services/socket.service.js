@@ -12,7 +12,7 @@ class SocketService {
         this.socket = null;
         this.listeners = new Map();
         this.isConnected = false;
-        this.serverURL = 'http://localhost:3001';
+        this.serverURL = 'http://localhost:5050';
         this.loadConfig();
     }
 
@@ -22,8 +22,8 @@ class SocketService {
             if (fs.existsSync(configPath)) {
                 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
                 if (config.API_BASE_URL) {
-                    this.serverURL = config.API_BASE_URL;
-                    console.log(`[SocketService] Loaded serverURL: ${this.serverURL}`);
+                    this.serverURL = config.API_BASE_URL.replace(/\/$/, '');
+                    console.log(`[SocketService] Loaded serverURL from config.json: ${this.serverURL}`);
                 }
             }
         } catch (error) {

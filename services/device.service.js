@@ -3,7 +3,7 @@ const { exec } = require('child_process');
 const os = require('os');
 
 class DeviceService {
-    static async getDeviceFingerprint() {
+    static async getDeviceFingerprint(employeeId = null) {
         try {
             const machineGUID = await this.getMachineGUID().catch(() => 'UNKNOWN-GUID');
             const diskSerial = await this.getDiskSerial().catch(() => 'UNKNOWN-SERIAL');
@@ -20,6 +20,7 @@ class DeviceService {
                 device_fingerprint: fingerprint,
                 mac_address: macAddress,
                 ip_address: currentIp,
+                employee_id: employeeId,
                 name: os.hostname(), // Use hostname as the device name for the backend
                 machine_info: {
                     hostname: os.hostname(),
@@ -34,6 +35,7 @@ class DeviceService {
                 device_fingerprint: 'FALLBACK-' + Date.now(),
                 mac_address: this.getMACAddress(),
                 ip_address: await this.getCurrentIP(),
+                employee_id: employeeId,
                 name: os.hostname(),
                 machine_info: { platform: os.platform() }
             };

@@ -256,7 +256,7 @@
             if (!isAdmin && user.onboarding_status !== 'APPROVED') {
                 // Check if they have an approved submission via API to be sure
                 try {
-                    const status = await apiService.getAttendanceStatus();
+                    const status = await apiService.getAttendanceStatus(user.employee_id);
                 } catch (err) {
                     if (err.message.includes('ONBOARDING_REQUIRED')) {
                         window.location.href = 'join-form.html?template=1'; // Hard-coded template 1 for now
@@ -287,13 +287,13 @@
             try {
                 const deviceInfo = await DeviceService.getDeviceFingerprint();
                 const ip = await DeviceService.getCurrentIP();
-                const statusResponse = await apiService.getAttendanceStatus();
+                const statusResponse = await apiService.getAttendanceStatus(user.employee_id);
                 updateState(statusResponse);
 
                 // Periodic state refresh every 60 seconds to catch external changes
                 setInterval(async () => {
                     try {
-                        const refreshedStatus = await apiService.getAttendanceStatus();
+                        const refreshedStatus = await apiService.getAttendanceStatus(user.employee_id);
                         updateState(refreshedStatus);
                     } catch (err) {
                         console.warn('State refresh failed:', err);
@@ -348,9 +348,10 @@
             try {
                 const deviceInfo = await DeviceService.getDeviceFingerprint();
                 const ip = await DeviceService.getCurrentIP();
-                await apiService.checkIn(deviceInfo.device_fingerprint, ip);
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                await apiService.checkIn(deviceInfo.device_fingerprint, ip, user.employee_id);
                 // Re-fetch state from backend to ensure accuracy
-                const statusResponse = await apiService.getAttendanceStatus();
+                const statusResponse = await apiService.getAttendanceStatus(user.employee_id);
                 updateState(statusResponse);
                 showToast('CHECKED IN', 'You are now checked in.');
             } catch (err) {
@@ -365,9 +366,10 @@
             try {
                 const deviceInfo = await DeviceService.getDeviceFingerprint();
                 const ip = await DeviceService.getCurrentIP();
-                await apiService.checkOut(deviceInfo.device_fingerprint, ip);
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                await apiService.checkOut(deviceInfo.device_fingerprint, ip, user.employee_id);
                 // Re-fetch state from backend to ensure accuracy
-                const statusResponse = await apiService.getAttendanceStatus();
+                const statusResponse = await apiService.getAttendanceStatus(user.employee_id);
                 updateState(statusResponse);
                 showToast('CHECKED OUT', 'You have checked out.');
             } catch (err) {

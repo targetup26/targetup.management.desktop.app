@@ -83,7 +83,7 @@
                 localStorage.setItem('token', res.token);
 
                 // Register Device
-                const dev = await DeviceService.getDeviceFingerprint();
+                const dev = await DeviceService.getDeviceFingerprint(res.user.employee_id);
                 try {
                     await apiService.registerDevice(dev);
                 } catch (deviceErr) {

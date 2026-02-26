@@ -4,7 +4,8 @@ const path = require('path');
 
 class ApiService {
     constructor() {
-        this.baseURL = 'http://localhost:3001/api';
+        // Default fallback if no config is found
+        this.baseURL = 'http://localhost:5050/api';
         this.loadConfig();
         this.token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
         this.maxRetries = 3;
@@ -16,9 +17,13 @@ class ApiService {
             if (fs.existsSync(configPath)) {
                 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
                 if (config.API_BASE_URL) {
-                    this.baseURL = `${config.API_BASE_URL}/api`;
-                    console.log(`[ApiService] Loaded baseURL: ${this.baseURL}`);
+                    // Normalize: remove trailing slash if present
+                    const base = config.API_BASE_URL.replace(/\/$/, '');
+                    this.baseURL = `${base}/api`;
+                    console.log(`[ApiService] Loaded baseURL from config.json: ${this.baseURL}`);
                 }
+            } else {
+                console.log(`[ApiService] config.json not found at ${configPath}. Using fallback: ${this.baseURL}`);
             }
         } catch (error) {
             console.error('[ApiService] Failed to load config.json:', error);
@@ -127,8 +132,9 @@ class ApiService {
         return response;
     }
 
-    async getAttendanceStatus() {
-        return await this.request('GET', '/attendance/status');
+    async getAttendanceStatus(employeeId = null) {
+        const endpoint = employeeId ? `/attendance/status?employee_id=${employeeId}` : '/attendance/status';
+        return await this.request('GET', endpoint);
     }
 
     async getProfile() {
@@ -139,27 +145,34 @@ class ApiService {
         return await this.request('POST', '/devices/register', deviceInfo);
     }
 
-    async checkIn(deviceFingerprint, ipAddress) {
+    async checkIn(deviceFingerprint, ipAddress, employeeId = null) {
         return await this.request('POST', '/attendance/check-in', {
             device_fingerprint: deviceFingerprint,
             ip_address: ipAddress,
+            employee_id: employeeId,
             source: 'DESKTOP_APP'
         });
     }
 
-    async checkOut(deviceFingerprint, ipAddress) {
+    async checkOut(deviceFingerprint, ipAddress, employeeId = null) {
         return await this.request('POST', '/attendance/check-out', {
             device_fingerprint: deviceFingerprint,
             ip_address: ipAddress,
+            employee_id: employeeId,
             source: 'DESKTOP_APP'
         });
     }
 
-    async sendHeartbeat(deviceFingerprint, ipAddress) {
+    async sendHeartbeat(deviceFingerprint, ipAddress, employeeId = null) {
         return await this.request('POST', '/attendance/heartbeat', {
             device_fingerprint: deviceFingerprint,
             ip_address: ipAddress,
-            active: true
+            employee_id: employeeId,
+            active: true,
+            device_info: {
+                fingerprint: deviceFingerprint,
+                ip: ipAddress
+            }
         });
     }
 

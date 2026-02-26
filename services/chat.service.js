@@ -1,11 +1,10 @@
 const axios = require('axios');
-
-const API_BASE_URL = 'http://192.168.100.54:3001/api';
+const apiService = require('./api.service');
 
 class ChatService {
     constructor() {
         this.client = axios.create({
-            baseURL: API_BASE_URL,
+            baseURL: apiService.baseURL,
             timeout: 10000
         });
     }
@@ -303,14 +302,14 @@ class ChatService {
 
         // If it's already a full URL, just return it (or append token if it matches our API)
         if (typeof id === 'string' && id.startsWith('http')) {
-            if (id.includes(API_BASE_URL)) {
+            if (id.includes(apiService.baseURL)) {
                 const connector = id.includes('?') ? '&' : '?';
                 return `${id}${connector}token=${this.getToken()}`;
             }
             return id;
         }
 
-        return `${API_BASE_URL}/storage/download/${id}?token=${this.getToken()}`;
+        return `${apiService.baseURL}/storage/download/${id}?token=${this.getToken()}`;
     }
 }
 
