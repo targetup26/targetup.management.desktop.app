@@ -64,6 +64,16 @@
         const btnSpinner = document.getElementById('btnSpinner');
         const errorMsg = document.getElementById('errorMsg');
 
+        // Check for existing session on startup
+        window.onload = () => {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            if (token && user) {
+                console.log('Session found, redirecting to dashboard...');
+                window.location.href = 'dashboard.html';
+            }
+        };
+
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 

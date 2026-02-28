@@ -84,6 +84,9 @@ class ApiService {
             // Handle auth errors
             if (error.response?.status === 401) {
                 this.clearToken();
+                if (typeof window !== 'undefined' && !window.location.href.includes('login.html')) {
+                    window.location.href = 'login.html';
+                }
                 throw new Error('Authentication expired. Please login again.');
             }
 
