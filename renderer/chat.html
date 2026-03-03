@@ -682,9 +682,17 @@
             }
         }
 
+        function joinAllRooms() {
+            if (rooms.length > 0 && socketService.getConnectionStatus()) {
+                socketService.joinRooms(rooms.map(r => r.id));
+                console.log(`[Chat] Joined ${rooms.length} rooms successfully`);
+            }
+        }
+
         function setupSocketHandlers() {
             socketService.on('connected', () => {
-                if (rooms.length > 0) socketService.joinRooms(rooms.map(r => r.id));
+                console.log('✅ Socket connected event received');
+                joinAllRooms();
             });
 
             socketService.on('message', (data) => {
