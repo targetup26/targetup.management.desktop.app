@@ -1,15 +1,6 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 
-// Set a CUSTOM User Data path to avoid %APPDATA% permission/collision issues
-// In development, you might want a local userData folder,
-// but in production (installed), it MUST use the standard system path
-// because C:\Program Files\ is read-only.
-if (!app.isPackaged) {
-    const userDataPath = path.join(__dirname, 'userData');
-    app.setPath('userData', userDataPath);
-}
-
 // Disable GPU Cache to prevent "Access Denied" errors on some systems
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('disable-http-cache');
@@ -52,12 +43,6 @@ function createWindow() {
     });
 
     mainWindow.loadFile('renderer/login.html');
-
-    // Open DevTools in development
-    // Open DevTools only in development
-    if (!app.isPackaged) {
-        mainWindow.webContents.openDevTools();
-    }
 
     // Minimize to tray instead of closing
     mainWindow.on('close', (event) => {
