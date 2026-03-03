@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 
+// Disable hardware acceleration to prevent GPU errors
+app.disableHardwareAcceleration();
+
 // Disable GPU Cache to prevent "Access Denied" errors on some systems
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('disable-http-cache');
@@ -43,6 +46,9 @@ function createWindow() {
     });
 
     mainWindow.loadFile('renderer/login.html');
+
+    // Open DevTools for debugging the "code leak" issue
+    mainWindow.webContents.openDevTools();
 
     // Minimize to tray instead of closing
     mainWindow.on('close', (event) => {
