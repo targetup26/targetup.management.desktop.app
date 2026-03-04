@@ -47,8 +47,6 @@ function createWindow() {
 
     mainWindow.loadFile('renderer/login.html');
 
-    // Open DevTools for debugging the "code leak" issue
-    mainWindow.webContents.openDevTools();
 
     // Minimize to tray instead of closing
     mainWindow.on('close', (event) => {
