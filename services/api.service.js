@@ -8,7 +8,8 @@ class ApiService {
         this.baseURL = 'http://localhost:5050/api';
         this.loadConfig();
         this.token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-        this.maxRetries = 3;
+        this.maxRetries = 1;   // was 3 — fewer retries = faster failure feedback
+        this.timeout = 10000;  // 10s timeout — prevents UI from hanging indefinitely
     }
 
     loadConfig() {
@@ -67,7 +68,8 @@ class ApiService {
             const config = {
                 method,
                 url: `${this.baseURL}${endpoint}`,
-                headers: this.getHeaders()
+                headers: this.getHeaders(),
+                timeout: this.timeout  // fail fast instead of hanging forever
             };
 
             if (this.token) {
@@ -97,7 +99,7 @@ class ApiService {
             // Retry on network errors
             if (!error.response && retries < this.maxRetries) {
                 console.log(`Network error, retrying... (${retries + 1}/${this.maxRetries})`);
-                await this.delay(1000 * (retries + 1));
+                await this.delay(500); // was 1000 * (retries + 1) — faster retry
                 return this.request(method, endpoint, data, retries + 1);
             }
 

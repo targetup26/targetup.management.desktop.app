@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } = require('electron');
 const path = require('path');
+const io = require('socket.io-client');
 
 // Disable hardware acceleration to prevent GPU errors
 app.disableHardwareAcceleration();
@@ -151,3 +152,76 @@ ipcMain.handle('SET_STARTUP_SETTING', (event, value) => {
     updateTrayMenu();
     return true;
 });
+
+// --- Background Socket for Notifications ---
+let backgroundSocket = null;
+
+ipcMain.on('START_BACKGROUND_SOCKET', (event, { token, serverUrl, userId }) => {
+    if (backgroundSocket) backgroundSocket.disconnect();
+
+    console.log('[Background Socket] Connecting to:', serverUrl);
+    backgroundSocket = io(serverUrl, {
+        auth: { token },
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: Infinity
+    });
+
+    backgroundSocket.on('connect', () => {
+        console.log('[Background Socket] Connected successfully');
+    });
+
+    backgroundSocket.on('new_message', (data) => {
+        const message = data.message;
+        // Don't notify if the message is from the current user
+        if (message.sender_id === userId) return;
+
+        // If it's a DM (room type is typically 'direct' or 'dm'), or just any message if wanted
+        // Only notify if main window is minimized, hidden, or not focused on chat.
+        // We can send an event to renderer to check if chat is active, but showing OS notification is generally safe.
+
+        // Let's ask the renderer if we should suppress the notification (e.g., if they are looking at the chat)
+        if (mainWindow && !mainWindow.isMinimized() && mainWindow.isVisible() && mainWindow.isFocused()) {
+            mainWindow.webContents.send('CHECK_CHAT_ACTIVE', message);
+        } else {
+            showNotification(message);
+        }
+    });
+});
+
+ipcMain.on('STOP_BACKGROUND_SOCKET', () => {
+    if (backgroundSocket) {
+        backgroundSocket.disconnect();
+        backgroundSocket = null;
+    }
+});
+
+// Renderer replies back if chat is NOT active so we should show notification
+ipcMain.on('SHOW_NOTIFICATION', (event, message) => {
+    showNotification(message);
+});
+
+function showNotification(message) {
+    if (!Notification.isSupported()) return;
+
+    const senderName = message.sender?.name || message.sender?.full_name || 'Someone';
+    const content = message.content || 'Sent an attachment';
+
+    const notif = new Notification({
+        title: `New message from ${senderName}`,
+        body: content,
+        icon: path.join(__dirname, 'assets', 'icon.png') // Ensure you have this icon
+    });
+
+    notif.on('click', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.show();
+            mainWindow.focus();
+            mainWindow.webContents.send('NAVIGATE_TO_ROOM', message.room_id);
+        }
+    });
+
+    notif.show();
+}

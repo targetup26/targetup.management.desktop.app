@@ -2065,8 +2065,27 @@
         function openFiles() { window.location.href = 'files.html'; }
         function minimizeToTray() { ipcRenderer.send('MINIMIZE_TO_TRAY'); }
         function goBack() { window.location.href = 'dashboard.html'; }
+
+        // --- Handle Background Notifications ---
+        ipcRenderer.on('CHECK_CHAT_ACTIVE', (event, message) => {
+            // Check if user is actively in this room
+            if (activeRoomId === message.room_id && !document.hidden) {
+                // User is actively looking at this msg, don't notify
+                return;
+            }
+            // User is in chat.html but looking at a different room or blurred
+            ipcRenderer.send('SHOW_NOTIFICATION', message);
+        });
+
+        ipcRenderer.on('NAVIGATE_TO_ROOM', (event, roomId) => {
+            // If the user clicks the OS notification and is already in chat.html
+            const roomEl = document.querySelector(`.sidebar-item[data-id="${roomId}"]`);
+            if (roomEl) roomEl.click();
+        });
+
         init();
     </script>
+
 </body>
 
 </html>

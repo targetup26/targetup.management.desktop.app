@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Login - SROHUB</title>
+    <title>Login - TargetUp</title>
 
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -36,6 +36,16 @@
                         autocomplete="current-password">
                 </div>
 
+                <!-- Remember Me -->
+                <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 4px;">
+                    <input type="checkbox" id="rememberMe"
+                        style="width: 16px; height: 16px; accent-color: var(--accent-blue); cursor: pointer; flex-shrink: 0;">
+                    <label for="rememberMe"
+                        style="font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; letter-spacing: 0.5px;">
+                        Remember me
+                    </label>
+                </div>
+
                 <div id="errorMsg" class="login-error" style="display: none;"></div>
 
                 <button type="submit" id="loginBtn" class="tactical-btn btn-primary"
@@ -63,14 +73,27 @@
         const btnText = document.getElementById('btnText');
         const btnSpinner = document.getElementById('btnSpinner');
         const errorMsg = document.getElementById('errorMsg');
+        const rememberMeCheckbox = document.getElementById('rememberMe');
 
-        // Check for existing session on startup
+        // Check for existing session or saved credentials on startup
         window.onload = () => {
             const token = localStorage.getItem('token');
             const user = localStorage.getItem('user');
             if (token && user) {
                 console.log('Session found, redirecting to dashboard...');
                 window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // Auto-fill saved credentials if Remember Me was used
+            const savedUsername = localStorage.getItem('saved_username');
+            const savedPassword = localStorage.getItem('saved_password');
+            const savedRemember = localStorage.getItem('remember_me') === 'true';
+
+            if (savedRemember && savedUsername) {
+                document.getElementById('username').value = savedUsername;
+                document.getElementById('password').value = savedPassword || '';
+                rememberMeCheckbox.checked = true;
             }
         };
 
@@ -86,8 +109,20 @@
             try {
                 const u = document.getElementById('username').value.trim();
                 const p = document.getElementById('password').value;
+                const remember = rememberMeCheckbox.checked;
 
                 const res = await apiService.login(u, p);
+
+                // Save or clear credentials based on Remember Me
+                if (remember) {
+                    localStorage.setItem('saved_username', u);
+                    localStorage.setItem('saved_password', p);
+                    localStorage.setItem('remember_me', 'true');
+                } else {
+                    localStorage.removeItem('saved_username');
+                    localStorage.removeItem('saved_password');
+                    localStorage.setItem('remember_me', 'false');
+                }
 
                 localStorage.setItem('user', JSON.stringify(res.user));
                 localStorage.setItem('token', res.token);

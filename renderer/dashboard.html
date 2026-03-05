@@ -182,6 +182,10 @@
     </div>
 
     <script>
+        // Expose ipcRenderer + window controls globally FIRST before anything else
+        const { ipcRenderer: _ipc } = require('electron');
+        window.minimizeToTray = function () { _ipc.send('MINIMIZE_TO_TRAY'); };
+
         // CRITICAL: Global Error Handler & Safety Init at TOP
         window.onerror = function (message, source, lineno, colno, error) {
             console.error('Global Error:', message, error);
@@ -249,8 +253,18 @@
             }
 
             const user = JSON.parse(userStr);
+            const token = localStorage.getItem('token');
+            const serverUrl = apiService.baseURL.replace('/api', '');
+
+            // Start Background Socket for OS Notifications
+            ipcRenderer.send('START_BACKGROUND_SOCKET', {
+                token: token,
+                serverUrl: serverUrl,
+                userId: user.id
+            });
 
             // Check if user is Admin - Bypass onboarding check
+
             const isAdmin = user.roles?.some(role => ['ADMIN', 'SUPER_ADMIN', 'HR_ADMIN'].includes(role));
 
             if (!isAdmin && user.onboarding_status !== 'APPROVED') {
@@ -298,7 +312,8 @@
                     } catch (err) {
                         console.warn('State refresh failed:', err);
                     }
-                }, 60000); // 60 seconds
+                }, 120000); // 120 seconds — reduced from 60s to ease backend load
+
             } catch (err) {
                 console.error('Link failure:', err);
                 statusTextEl.textContent = 'OFFLINE';
@@ -309,11 +324,15 @@
         function updateState(statusData) {
             // Support both string (legacy/internal) and object (API response) formats
             const status = (typeof statusData === 'string') ? statusData : (statusData.status || 'OFF_DUTY');
-            const activeBreak = statusData.active_break;
+            const activeBreak = statusData.active_break || null;
+            const hasCheckedOut = (typeof statusData === 'object' && statusData.is_checked_out === true);
 
             currentStatus = status;
-            const isCheckedIn = (status === 'PRESENT' || status === 'ON_BREAK' || status === 'LATE');
-            isOnBreak = (status === 'ON_BREAK');
+
+            // If they have checked out for the day, they are OFF_DUTY.
+            // Otherwise, they are checked in if status is PRESENT, ON_BREAK, or LATE.
+            const isCheckedIn = !hasCheckedOut && (status === 'PRESENT' || status === 'ON_BREAK' || status === 'LATE');
+            isOnBreak = !hasCheckedOut && (status === 'ON_BREAK');
 
             if (isCheckedIn) {
                 mainBtn.style.display = 'none';
@@ -337,8 +356,23 @@
             } else {
                 mainBtn.style.display = 'flex';
                 actionGrid.style.display = 'none';
-                statusTextEl.textContent = 'INACTIVE';
-                subStatusEl.textContent = 'Ready to check in';
+
+                if (hasCheckedOut) {
+                    statusTextEl.textContent = 'ROSTERED OFF';
+                    subStatusEl.textContent = 'Shift completed';
+                    mainBtn.disabled = true; // Prevent checking in again
+                    mainBtn.querySelector('span').textContent = 'DONE FOR TODAY';
+                    mainBtn.style.opacity = '0.5';
+                    mainBtn.style.cursor = 'not-allowed';
+                } else {
+                    statusTextEl.textContent = 'INACTIVE';
+                    subStatusEl.textContent = 'Ready to check in';
+                    mainBtn.disabled = false;
+                    mainBtn.querySelector('span').textContent = 'CHECK IN';
+                    mainBtn.style.opacity = '1';
+                    mainBtn.style.cursor = 'pointer';
+                }
+
                 stopBreakTimer();
             }
         }
@@ -412,6 +446,21 @@
             spinner.style.display = loading ? 'block' : 'none';
             btnText.style.display = loading ? 'none' : 'block';
             mainBtn.disabled = loading;
+
+            // Re-apply correct disabled state for action buttons
+            const checkOutBtnElem = document.getElementById('checkOutBtn');
+            const breakBtnElem = document.getElementById('breakBtn');
+
+            if (checkOutBtnElem) {
+                checkOutBtnElem.disabled = loading;
+                checkOutBtnElem.style.opacity = loading ? '0.5' : '1';
+                checkOutBtnElem.style.cursor = loading ? 'not-allowed' : 'pointer';
+            }
+            if (breakBtnElem) {
+                breakBtnElem.disabled = loading;
+                breakBtnElem.style.opacity = loading ? '0.5' : '1';
+                breakBtnElem.style.cursor = loading ? 'not-allowed' : 'pointer';
+            }
         }
 
         function startBreakTimer(initialSeconds = 0) {
@@ -596,6 +645,7 @@
         function openChat() { window.location.href = 'chat.html'; }
         function openForms() { window.location.href = 'forms.html'; }
         function openFiles() { window.location.href = 'files.html'; }
+        // minimizeToTray defined globally at top of script
 
         // Wrap init in try-catch
         (async () => {
