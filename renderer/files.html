@@ -1,403 +1,878 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Targetup - File Manager</title>
+    <title>My Files — Targetup</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-        .file-grid {
+        :root {
+            --accent: #00a3ff;
+            --accent-glow: rgba(0,163,255,0.18);
+            --accent-gold: #fabd00;
+            --danger: #ff4646;
+            --bg-card: rgba(255,255,255,0.025);
+            --border: rgba(255,255,255,0.07);
+            --text-sub: rgba(255,255,255,0.4);
+        }
+
+        /* ── Layout ─────────────────────────── */
+        .fm-root {
+            display: flex; height: calc(100vh - 64px); gap: 0; overflow: hidden;
+        }
+
+        /* ── Sidebar ────────────────────────── */
+        .fm-sidebar {
+            width: 240px; min-width: 240px;
+            background: rgba(8,10,16,0.7);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .fm-sidebar-logo {
+            padding: 20px; border-bottom: 1px solid var(--border);
+            font-size: 0.7rem; font-weight: 900; letter-spacing: 3px;
+            color: var(--accent); text-transform: uppercase;
+            display: flex; align-items: center; gap-10px;
+        }
+        .fm-sidebar-logo span { font-size: 1.2rem; }
+        .fm-nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 18px; font-size: 0.72rem; font-weight: 800;
+            color: var(--text-sub); cursor: pointer; transition: all 0.18s;
+            border-radius: 0; text-transform: uppercase; letter-spacing: 0.8px;
+        }
+        .fm-nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .fm-nav-item.active { background: rgba(0,163,255,0.1); color: var(--accent); border-right: 2px solid var(--accent); }
+        .fm-nav-label {
+            padding: 16px 18px 6px;
+            font-size: 0.58rem; font-weight: 900; letter-spacing: 2px;
+            color: rgba(255,255,255,0.15); text-transform: uppercase;
+        }
+        .storage-bar-wrap {
+            padding: 16px 18px; margin-top: auto;
+            border-top: 1px solid var(--border);
+        }
+        .storage-bar-info {
+            display: flex; justify-content: space-between;
+            font-size: 0.65rem; font-weight: 800; color: var(--text-sub);
+            margin-bottom: 8px;
+        }
+        .storage-bar-outer {
+            height: 5px; border-radius: 4px;
+            background: rgba(255,255,255,0.07);
+        }
+        .storage-bar-inner {
+            height: 100%; border-radius: 4px; transition: width 0.6s ease;
+            background: linear-gradient(90deg, var(--accent), #00f3ff);
+        }
+
+        /* ── Content Area ───────────────────── */
+        .fm-content {
+            flex: 1; display: flex; flex-direction: column;
+            overflow: hidden; background: transparent;
+        }
+
+        /* ── Topbar ─────────────────────────── */
+        .fm-topbar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 20px; border-bottom: 1px solid var(--border);
+            background: rgba(8,10,16,0.5); flex-shrink: 0;
+        }
+        .fm-search-wrap {
+            flex: 1; max-width: 340px; position: relative;
+        }
+        .fm-search {
+            width: 100%; padding: 9px 14px 9px 36px;
+            background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            border-radius: 10px; color: #fff; font-size: 0.75rem; font-weight: 600;
+            outline: none; transition: all 0.2s; box-sizing: border-box;
+        }
+        .fm-search:focus { border-color: rgba(0,163,255,0.4); background: rgba(0,163,255,0.04); }
+        .fm-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; opacity: 0.35; }
+        .fm-view-toggle {
+            display: flex; gap: 2px; background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border); border-radius: 8px; padding: 3px;
+        }
+        .fm-view-btn {
+            width: 30px; height: 28px; display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.18s;
+            color: var(--text-sub);
+        }
+        .fm-view-btn.active { background: var(--accent); color: #000; }
+        .btn-accent {
+            padding: 9px 16px; border-radius: 10px; font-size: 0.68rem; font-weight: 900;
+            letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+            background: var(--accent); color: #000; border: none; transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-accent:hover { opacity: 0.85; transform: scale(1.03); }
+        .btn-outline {
+            padding: 9px 14px; border-radius: 10px; font-size: 0.68rem; font-weight: 900;
+            letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+            background: transparent; color: var(--text-sub); border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+        /* ── Breadcrumb ─────────────────────── */
+        .fm-breadcrumb {
+            display: flex; align-items: center; gap: 2px;
+            padding: 10px 20px; border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.15); flex-shrink: 0;
+        }
+        .bc-item {
+            font-size: 0.7rem; font-weight: 800; padding: 4px 8px;
+            border-radius: 6px; cursor: pointer; color: var(--text-sub);
+            transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.7px;
+        }
+        .bc-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+        .bc-item.active { color: #fff; cursor: default; }
+        .bc-sep { color: rgba(255,255,255,0.15); font-size: 0.75rem; }
+
+        /* ── Drop Zone ──────────────────────── */
+        .fm-dropzone {
+            margin: 14px 20px; border: 1.5px dashed rgba(255,255,255,0.1);
+            border-radius: 14px; padding: 22px;
+            text-align: center; cursor: pointer; transition: all 0.25s;
+            background: rgba(255,255,255,0.01); flex-shrink: 0;
+        }
+        .fm-dropzone:hover, .fm-dropzone.dragover {
+            border-color: var(--accent); background: rgba(0,163,255,0.04);
+        }
+        .fm-dropzone p { font-size: 0.73rem; color: var(--text-sub); margin: 4px 0 0; }
+        .fm-upload-progress {
+            margin: 0 20px 10px; height: 5px; background: rgba(255,255,255,0.06);
+            border-radius: 4px; overflow: hidden; display: none;
+        }
+        .fm-upload-progress-bar {
+            height: 100%; width: 0%; border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent), #00f3ff);
+            transition: width 0.3s;
+        }
+
+        /* ── File Grid ──────────────────────── */
+        .fm-files-area {
+            flex: 1; overflow-y: auto; padding: 10px 20px 20px;
+        }
+        .fm-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 14px;
+        }
+        .fm-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 0; overflow: hidden;
+            cursor: pointer; transition: all 0.24s; position: relative;
+            display: flex; flex-direction: column;
+        }
+        .fm-card:hover { border-color: rgba(0,163,255,0.4); transform: translateY(-3px) scale(1.015); box-shadow: 0 12px 30px rgba(0,0,0,0.4), 0 0 14px rgba(0,163,255,0.07); }
+        .fm-card.folder:hover { border-color: rgba(250,189,0,0.45); box-shadow: 0 12px 30px rgba(0,0,0,0.4), 0 0 14px rgba(250,189,0,0.07); }
+        .fm-card-thumb {
+            height: 110px; background: rgba(0,0,0,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.8rem; position: relative; overflow: hidden;
+        }
+        .fm-card-thumb img {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.3s; position: absolute; inset: 0;
+        }
+        .fm-card:hover .fm-card-thumb img { transform: scale(1.07); }
+        .thumb-hover-mask {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.68rem; font-weight: 900; color: #fff;
+            letter-spacing: 1px; text-transform: uppercase; opacity: 0; transition: opacity 0.2s;
+        }
+        .fm-card:hover .thumb-hover-mask { opacity: 1; }
+        .fm-card-body { padding: 12px 12px 10px; }
+        .fm-card-name {
+            font-size: 0.75rem; font-weight: 800; color: #fff;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+        .fm-card-meta { font-size: 0.62rem; color: var(--text-sub); font-weight: 600; display: flex; justify-content: space-between; }
+        .fm-card-badge {
+            position: absolute; top: 8px; left: 8px;
+            font-size: 0.5rem; font-weight: 900; padding: 2px 6px; border-radius: 4px;
+            background: rgba(250,189,0,0.15); color: var(--accent-gold); text-transform: uppercase; letter-spacing: 0.8px;
         }
 
-        .file-card {
-            background: linear-gradient(145deg, rgba(21, 25, 28, 0.4), rgba(11, 14, 18, 0.6));
-            border: 1px solid var(--border-subtle);
-            backdrop-filter: var(--glass-blur);
-            border-radius: 20px;
-            padding: 24px;
-            transition: all 0.4s var(--ease-pro);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: var(--shadow-pro);
+        /* ── List View ──────────────────────── */
+        .fm-list { display: flex; flex-direction: column; gap: 4px; }
+        .fm-list-row {
+            display: flex; align-items: center; gap: 14px;
+            padding: 10px 14px; border-radius: 10px; cursor: pointer;
+            border: 1px solid transparent; transition: all 0.18s;
+        }
+        .fm-list-row:hover { background: rgba(255,255,255,0.04); border-color: var(--border); }
+        .fm-list-row .lrow-icon { font-size: 1.4rem; width: 28px; text-align: center; }
+        .fm-list-row .lrow-name { flex: 1; font-size: 0.78rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fm-list-row .lrow-size { width: 70px; text-align: right; font-size: 0.65rem; color: var(--text-sub); font-weight: 700; }
+        .fm-list-row .lrow-date { width: 90px; text-align: right; font-size: 0.65rem; color: var(--text-sub); font-weight: 600; }
+        .fm-list-row .lrow-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+        .fm-list-row:hover .lrow-actions { opacity: 1; }
+        .lrow-btn {
+            width: 26px; height: 26px; border-radius: 6px; display: flex;
+            align-items: center; justify-content: center; font-size: 0.75rem;
+            background: rgba(255,255,255,0.05); cursor: pointer; transition: all 0.15s; border: none;
+            color: var(--text-sub);
+        }
+        .lrow-btn:hover { background: rgba(0,163,255,0.15); color: var(--accent); }
+        .lrow-btn.danger:hover { background: rgba(255,70,70,0.12); color: var(--danger); }
+
+        /* ── Context Menu ───────────────────── */
+        .ctx-menu {
+            position: fixed; z-index: 9999;
+            background: linear-gradient(180deg, rgba(14,18,28,0.99), rgba(10,13,22,0.99));
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+            padding: 6px; min-width: 200px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,255,255,0.04);
+            display: none; backdrop-filter: blur(20px);
+        }
+        .ctx-menu.open { display: block; animation: ctxIn 0.1s ease; }
+        @keyframes ctxIn { from { opacity: 0; transform: scale(0.96) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .ctx-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 12px; border-radius: 8px;
+            font-size: 0.7rem; font-weight: 800; cursor: pointer;
+            color: rgba(255,255,255,0.65); transition: all 0.14s;
+            letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .ctx-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+        .ctx-item.danger:hover { background: rgba(255,70,70,0.1); color: var(--danger); }
+        .ctx-item.primary:hover { background: rgba(0,163,255,0.12); color: var(--accent); }
+        .ctx-sep { height: 1px; background: rgba(255,255,255,0.06); margin: 5px 8px; }
+
+        /* ── Modals ─────────────────────────── */
+        .modal-bg {
+            position: fixed; inset: 0; z-index: 9998;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-bg.open { display: flex; animation: fadeIn 0.16s ease; }
+        .modal-box {
+            background: linear-gradient(180deg, rgba(14,18,28,0.99), rgba(10,13,22,0.99));
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 22px;
+            padding: 28px; width: 440px; max-width: 94vw;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.9);
+        }
+        .modal-title {
+            font-size: 1rem; font-weight: 900; color: #fff; margin-bottom: 18px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .modal-input {
+            width: 100%; padding: 11px 14px; border-radius: 10px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+            color: #fff; font-size: 0.82rem; font-weight: 700; outline: none;
+            margin-bottom: 16px; transition: all 0.2s; box-sizing: border-box;
+        }
+        .modal-input:focus { border-color: rgba(0,163,255,0.45); }
+        .link-box {
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
+            font-size: 0.68rem; font-family: monospace; color: var(--accent);
+            word-break: break-all; min-height: 46px; line-height: 1.6;
+        }
+        .modal-row { display: flex; gap: 8px; }
+        .btn-modal-primary {
+            flex: 1; padding: 11px; border-radius: 10px;
+            background: var(--accent); color: #000;
+            font-size: 0.68rem; font-weight: 900; letter-spacing: 1px;
+            text-transform: uppercase; cursor: pointer; border: none; transition: all 0.2s;
+        }
+        .btn-modal-primary:hover { opacity: 0.85; }
+        .btn-modal-ghost {
+            padding: 11px 14px; border-radius: 10px;
+            background: rgba(255,255,255,0.04); color: var(--text-sub);
+            font-size: 0.68rem; font-weight: 800; cursor: pointer; border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .btn-modal-ghost:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+        /* ── Preview ────────────────────────── */
+        .preview-overlay {
+            position: fixed; inset: 0; z-index: 99999;
+            background: rgba(0,0,0,0.95); display: none;
+            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        }
+        .preview-overlay.open { display: flex; animation: fadeIn 0.18s ease; }
+        .preview-overlay img { max-width: 88vw; max-height: 76vh; object-fit: contain; border-radius: 10px; }
+        .preview-overlay iframe { width: 88vw; height: 76vh; border: none; border-radius: 10px; background: #fff; }
+        .preview-bar {
+            display: flex; align-items: center; gap: 10px; max-width: 88vw;
+        }
+        .preview-filename { font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.5); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* ── Toast ──────────────────────────── */
+        .toast {
+            position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+            background: rgba(12,16,26,0.97); border: 1px solid rgba(0,163,255,0.25);
+            border-radius: 12px; padding: 11px 22px;
+            font-size: 0.72rem; font-weight: 800; color: #fff;
+            z-index: 99999; box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+            display: none; white-space: nowrap;
         }
 
-        .file-card:hover {
-            border-color: var(--accent-blue);
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 163, 255, 0.1);
-        }
+        /* ── Empty / Loading ─────────────────── */
+        .fm-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--text-sub); }
+        .fm-empty .icon { font-size: 3rem; opacity: 0.3; }
+        .fm-empty p { font-size: 0.72rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
 
-        .file-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 3px;
-            height: 100%;
-            background: linear-gradient(to bottom, var(--accent-blue), transparent);
-            opacity: 0.6;
-        }
-
-        .file-icon {
-            font-size: 2.8rem;
-            text-align: center;
-            margin-bottom: 5px;
-            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
-        }
-
-        .file-name {
-            font-weight: 800;
-            font-size: 0.85rem;
-            color: #fff;
-            letter-spacing: -0.2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .file-info {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            display: flex;
-            justify-content: space-between;
-            font-weight: 600;
-        }
-
-        .upload-dropzone {
-            border: 2px dashed rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 50px;
-            text-align: center;
-            transition: all 0.4s var(--ease-pro);
-            cursor: pointer;
-            background: rgba(255, 255, 255, 0.015);
-            margin-bottom: 35px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .upload-dropzone:hover,
-        .upload-dropzone.dragover {
-            border-color: var(--accent-blue);
-            background: rgba(0, 163, 255, 0.05);
-            box-shadow: inset 0 0 30px rgba(0, 163, 255, 0.05);
-        }
-
-        .upload-icon {
-            font-size: 3rem;
-            color: var(--accent-blue);
-            margin-bottom: 15px;
-            filter: drop-shadow(0 0 20px var(--accent-blue-glow));
-        }
-
-        .progress-container {
-            margin-top: 25px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            height: 10px;
-            width: 100%;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            display: none;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-blue), #00F3FF);
-            width: 0%;
-            transition: width 0.3s ease;
-            box-shadow: 0 0 15px var(--accent-blue-glow);
-        }
-
-        .category-tabs {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 30px;
-            padding: 0 5px;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 800;
-            cursor: pointer;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-subtle);
-            transition: all 0.3s;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-        }
-
-        .tab.active {
-            background: var(--accent-blue);
-            color: #000;
-            border-color: var(--accent-blue);
-            box-shadow: 0 10px 20px rgba(0, 163, 255, 0.2);
-        }
-
-        .tab:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
     </style>
 </head>
-
 <body>
     <div class="drag-overlay"></div>
-    <div class="app-container">
-        <!-- Navigation Rail -->
-        <div class="nav-rail">
-            <div class="nav-logo">T</div>
-            <div class="nav-icon" onclick="openDashboard()" title="Dashboard">🏠</div>
-            <div class="nav-icon" onclick="openChat()" title="Team Communications">💬</div>
-            <div class="nav-icon" onclick="openForms()" title="Forms">📋</div>
-            <div class="nav-icon active" title="File Management">📁</div>
-            <div style="flex: 1;"></div>
-            <div class="nav-icon" onclick="logout()" title="Log Out" style="color: var(--accent-red);">
-                🔒</div>
-        </div>
+    <div class="app-container" style="flex-direction: column;">
 
-        <!-- Sidebar (Refined) -->
-        <div class="sidebar">
-            <div class="sidebar-header">STORAGE USAGE</div>
-            <div class="sidebar-content">
-                <div class="sidebar-item active" style="margin-bottom: 30px;">
-                    <span style="font-size: 1.2rem;">📊</span>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <span
-                            style="font-weight: 900; color: #fff; font-size: 0.75rem; letter-spacing: 1px;">USAGE</span>
-                        <span style="font-size: 0.7rem; color: var(--accent-blue);" id="usageText">Loading...</span>
-                    </div>
-                </div>
-
-                <div
-                    style="margin-bottom: 15px; padding: 0 15px; font-size: 0.65rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px;">
-                    Filters</div>
-                <div class="sidebar-item" onclick="filterFiles('document')"><span>📄</span> DOCUMENTS</div>
-                <div class="sidebar-item" onclick="filterFiles('image')"><span>🖼️</span> IMAGES</div>
-                <div class="sidebar-item" onclick="filterFiles('other')"><span>🎥</span> MEDIA</div>
-                <div class="sidebar-item" onclick="filterFiles('all')"><span>📦</span> ALL FILES</div>
-            </div>
-
-            <div
-                style="padding: 25px; border-top: 1px solid var(--border-subtle); font-size: 0.55rem; color: var(--text-muted); letter-spacing: 2px; font-weight: 700; opacity: 0.5;">
-                SECURE STORAGE
+        <!-- Stage Header (Electron titlebar) -->
+        <div class="stage-header" style="height:64px; flex-shrink:0;">
+            <div class="stage-title" id="headerTitle">📁 MY FILES</div>
+            <div class="window-controls">
+                <div class="control-btn" onclick="minimizeToTray()">&#8211;</div>
+                <div class="control-btn control-close" onclick="minimizeToTray()">&times;</div>
             </div>
         </div>
 
-        <!-- Main Content Area -->
-        <div class="main-stage glass-stage">
-            <div class="stage-header" style="height: 64px;">
-                <div class="stage-title">MY FILES</div>
-                <div class="window-controls">
-                    <div class="control-btn" onclick="minimizeToTray()">&#8211;</div>
-                    <div class="control-btn control-close" onclick="minimizeToTray()">&times;</div>
-                </div>
+        <!-- Nav + File Manager -->
+        <div style="display:flex; flex:1; overflow:hidden;">
+
+            <!-- Nav Rail -->
+            <div class="nav-rail">
+                <div class="nav-logo">T</div>
+                <div class="nav-icon" onclick="nav('dashboard.html')" title="Dashboard">🏠</div>
+                <div class="nav-icon" onclick="nav('chat.html')" title="Chat">💬</div>
+                <div class="nav-icon" onclick="nav('forms.html')" title="Forms">📋</div>
+                <div class="nav-icon active" title="Files">📁</div>
+                <div style="flex:1;"></div>
+                <div class="nav-icon" onclick="logout()" title="Logout" style="color:var(--accent-red);">🔒</div>
             </div>
 
-            <div class="scroll-content" style="padding: 30px;">
-                <!-- Upload Zone -->
-                <div class="upload-dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-                    <div class="upload-icon">📤</div>
-                    <h3
-                        style="font-size: 1.2rem; font-weight: 900; color: #fff; letter-spacing: -0.5px; margin-bottom: 8px;">
-                        UPLOAD FILES</h3>
-                    <p style="color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.5px;">Drag & drop
-                        files or click to browse</p>
-                    <input type="file" id="fileInput" style="display: none;" multiple>
+            <!-- File Manager Root -->
+            <div class="fm-root" style="flex:1;">
 
-                    <div class="progress-container" id="progressContainer">
-                        <div class="progress-bar" id="progressBar"></div>
+                <!-- Sidebar -->
+                <div class="fm-sidebar">
+                    <div class="fm-sidebar-logo">
+                        <span>📁</span>&nbsp;&nbsp;Drive
                     </div>
-                    <p id="progressLabel"
-                        style="font-size: 0.7rem; font-weight: 800; color: var(--accent-blue); margin-top: 15px; display: none;">
-                        UPLOADING...</p>
+
+                    <div class="fm-nav-label">Quick Access</div>
+                    <div class="fm-nav-item active" id="nav-my" onclick="setQuickAccess('my')"><span>🗂️</span> &nbsp;My Files</div>
+                    <div class="fm-nav-item" id="nav-images" onclick="setQuickAccess('images')"><span>🖼️</span> &nbsp;Images</div>
+                    <div class="fm-nav-item" id="nav-docs" onclick="setQuickAccess('docs')"><span>📝</span> &nbsp;Documents</div>
+                    <div class="fm-nav-item" id="nav-media" onclick="setQuickAccess('media')"><span>🎬</span> &nbsp;Media</div>
+
+                    <div class="fm-nav-label" style="margin-top:8px;">Storage</div>
+                    <div style="padding: 6px 18px;">
+                        <div class="storage-bar-info">
+                            <span>Used</span>
+                            <span id="storageUsed">—</span>
+                        </div>
+                        <div class="storage-bar-outer">
+                            <div class="storage-bar-inner" id="storageBar" style="width:0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="storage-bar-wrap" style="border-top: none; padding-top:0; margin-top: auto;">
+                        <div style="font-size:0.62rem; font-weight:800; color:var(--text-sub); text-align:center; padding:10px 0;">
+                            <span id="userNameLabel">—</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Filters -->
-                <div class="category-tabs">
-                    <div class="tab active" onclick="filterFiles('all')">ALL FILES</div>
-                    <div class="tab" onclick="filterFiles('image')">IMAGES</div>
-                    <div class="tab" onclick="filterFiles('document')">DOCUMENTS</div>
-                    <div class="tab" onclick="filterFiles('other')">OTHERS</div>
-                </div>
+                <!-- Content -->
+                <div class="fm-content">
 
-                <!-- File Grid -->
-                <div class="file-grid" id="fileGrid">
-                    <!-- Dynamic Loading -->
+                    <!-- Topbar -->
+                    <div class="fm-topbar">
+                        <div class="fm-search-wrap">
+                            <span class="fm-search-icon">🔍</span>
+                            <input class="fm-search" id="searchBox" placeholder="Search files..." oninput="handleSearch(this.value)">
+                        </div>
+
+                        <div class="fm-view-toggle">
+                            <div class="fm-view-btn active" id="vbtn-grid" onclick="setView('grid', this)" title="Grid View">⊞</div>
+                            <div class="fm-view-btn" id="vbtn-list" onclick="setView('list', this)" title="List View">☰</div>
+                        </div>
+
+                        <button class="btn-outline" onclick="showNewFolderModal()">📁 New Folder</button>
+                        <button class="btn-accent" onclick="document.getElementById('fileInput').click()">
+                            ⬆ Upload
+                        </button>
+                        <input type="file" id="fileInput" multiple style="display:none;" onchange="handleFileInputChange(this.files)">
+                    </div>
+
+                    <!-- Breadcrumb -->
+                    <div class="fm-breadcrumb" id="breadcrumb">
+                        <div class="bc-item active" onclick="goRoot()">🏠 Root</div>
+                    </div>
+
+                    <!-- Drop Zone -->
+                    <div class="fm-dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                        <div style="font-size:1.6rem; color:var(--accent); margin-bottom:6px; filter:drop-shadow(0 0 10px var(--accent-glow));">⬆</div>
+                        <p>Drop files here or click to upload <span id="dropzoneTargetHint" style="color:var(--accent);">→ Root</span></p>
+                    </div>
+
+                    <!-- Progress -->
+                    <div class="fm-upload-progress" id="uploadProgress">
+                        <div class="fm-upload-progress-bar" id="uploadProgressBar"></div>
+                    </div>
+
+                    <!-- File Area -->
+                    <div class="fm-files-area" id="filesArea">
+                        <div class="fm-empty"><div class="spinner"></div><p>Loading...</p></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Context Menu -->
+    <div class="ctx-menu" id="ctxMenu">
+        <div class="ctx-item primary" id="ctx-open" onclick="ctxDo('open')">📂 &nbsp;Open</div>
+        <div class="ctx-item" id="ctx-preview" onclick="ctxDo('preview')">👁 &nbsp;Preview</div>
+        <div class="ctx-item" onclick="ctxDo('download')">⬇ &nbsp;Download</div>
+        <div class="ctx-item" onclick="ctxDo('share')">🔗 &nbsp;Share Link</div>
+        <div class="ctx-item" onclick="ctxDo('rename')">✏️ &nbsp;Rename</div>
+        <div class="ctx-sep"></div>
+        <div class="ctx-item danger" onclick="ctxDo('delete')">🗑 &nbsp;Delete</div>
+    </div>
+
+    <!-- Share Modal -->
+    <div class="modal-bg" id="shareModal">
+        <div class="modal-box">
+            <div class="modal-title">🔗 <span id="shareModalTitle">Share Link</span></div>
+            <div class="link-box" id="shareLinkText">Generating link...</div>
+            <div class="modal-row">
+                <button class="btn-modal-primary" onclick="copyShareLink()">📋 Copy Link</button>
+                <button class="btn-modal-ghost" onclick="closeModal('shareModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Folder / Rename Modal -->
+    <div class="modal-bg" id="inputModal">
+        <div class="modal-box">
+            <div class="modal-title" id="inputModalTitle">📁 New Folder</div>
+            <input class="modal-input" id="inputModalField" placeholder="Enter name..." onkeydown="if(event.key==='Enter')confirmInput()">
+            <div class="modal-row">
+                <button class="btn-modal-primary" onclick="confirmInput()">✔ Confirm</button>
+                <button class="btn-modal-ghost" onclick="closeModal('inputModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Overlay -->
+    <div class="preview-overlay" id="previewOverlay" onclick="closePreview()">
+        <div id="previewContent" onclick="event.stopPropagation()"></div>
+        <div class="preview-bar" onclick="event.stopPropagation()">
+            <span class="preview-filename" id="previewFilename"></span>
+            <a id="previewDlBtn" href="#" class="btn-accent" style="text-decoration:none; font-size:0.65rem; padding:8px 14px;" onclick="event.stopPropagation()">⬇ Download</a>
+            <button class="btn-modal-ghost" onclick="closePreview()">✕ Close</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
     <script>
         const storageService = require('../services/storage.service');
-        const apiService = require('../services/api.service');
+        const apiService     = require('../services/api.service');
         const { ipcRenderer } = require('electron');
 
-        const fileGrid = document.getElementById('fileGrid');
-        const dropzone = document.getElementById('dropzone');
-        const fileInput = document.getElementById('fileInput');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressLabel = document.getElementById('progressLabel');
-        const usageText = document.getElementById('usageText');
+        // ── State ────────────────────────────────────────────
+        let allItems      = [];   // raw items in current folder
+        let viewMode      = 'grid';
+        let searchQuery   = '';
+        let quickFilter   = 'my'; // my | images | docs | media
+        let currentFolderId = null;
+        let folderStack   = [];   // [{id, name}, ...]
+        let ctxTarget     = null; // item under context menu
+        let inputModalMode = 'folder'; // 'folder' | 'rename'
+        let renameTarget  = null;
+        let currentUser   = null;
 
-        let allFiles = [];
-
+        // ── Bootstrap ────────────────────────────────────────
         async function init() {
-            await loadFiles();
+            try {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    currentUser = JSON.parse(userStr);
+                    document.getElementById('userNameLabel').textContent = currentUser.full_name || currentUser.name || 'My Drive';
+                }
+                await loadFolder(null);
+            } catch (e) { console.error(e); }
         }
 
-        async function loadFiles() {
+        // ── Load Folder ──────────────────────────────────────
+        async function loadFolder(folderId) {
+            currentFolderId = folderId;
+            showLoading();
             try {
-                fileGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">Loading files...</div>';
-                const files = await storageService.getFiles();
-                allFiles = files;
-                renderFiles(files);
-                updateUsage(files);
+                const result = await storageService.getFiles(folderId);
+                allItems = Array.isArray(result) ? result : (result.data || []);
+                render();
+                updateBreadcrumb();
+                updateDropzoneHint();
+                updateStorageBar();
             } catch (err) {
-                fileGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-red);">Failed to load repository</div>';
-                console.error('File load error:', err);
+                showError('Failed to load files');
+                console.error(err);
             }
         }
 
-        function renderFiles(files) {
-            if (files.length === 0) {
-                fileGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">Repository is empty</div>';
+        // ── Navigation ───────────────────────────────────────
+        function openFolder(item) {
+            folderStack.push({ id: item.id, name: item.original_name });
+            loadFolder(item.id);
+        }
+
+        function goRoot() {
+            folderStack = [];
+            loadFolder(null);
+        }
+
+        function jumpTo(index) {
+            if (index < 0) { goRoot(); return; }
+            folderStack = folderStack.slice(0, index + 1);
+            const crumb = folderStack[folderStack.length - 1];
+            loadFolder(crumb.id);
+        }
+
+        // ── Render ───────────────────────────────────────────
+        function render() {
+            let items = [...allItems];
+
+            // Quick filter
+            if (quickFilter === 'images') items = items.filter(f => !f.is_folder && f.mime_type?.startsWith('image/'));
+            else if (quickFilter === 'docs') items = items.filter(f => !f.is_folder && (f.mime_type?.includes('pdf') || f.mime_type?.includes('word') || f.mime_type?.includes('text')));
+            else if (quickFilter === 'media') items = items.filter(f => !f.is_folder && (f.mime_type?.startsWith('video/') || f.mime_type?.startsWith('audio/')));
+
+            // Search
+            if (searchQuery) items = items.filter(f => f.original_name?.toLowerCase().includes(searchQuery));
+
+            // Folders first
+            items.sort((a,b) => (b.is_folder ? 1 : 0) - (a.is_folder ? 1 : 0));
+
+            const area = document.getElementById('filesArea');
+            if (!items.length) {
+                area.innerHTML = `<div class="fm-empty"><div class="icon">📁</div><p>This folder is empty</p></div>`;
                 return;
             }
 
-            fileGrid.innerHTML = files.map(file => `
-                <div class="file-card">
-                    <div class="file-icon">${getFileIcon(file.mime_type)}</div>
-                    <div class="file-name" title="${file.original_name}">${file.original_name}</div>
-                    <div class="file-info">
-                        <span>${formatFileSize(file.file_size)}</span>
-                        <span>${new Date(file.createdAt).toLocaleDateString()}</span>
+            area.innerHTML = viewMode === 'grid' ? renderGrid(items) : renderList(items);
+        }
+
+        function renderGrid(items) {
+            return `<div class="fm-grid">${items.map(item => {
+                const isFolder = item.is_folder;
+                const isImage  = !isFolder && item.mime_type?.startsWith('image/');
+                const thumbSrc = isImage ? storageService.getDownloadUrl(item.id) : null;
+
+                const thumb = isImage
+                    ? `<img src="${thumbSrc}" alt="" onerror="this.style.display='none';">`
+                    : '';
+                const icon = isImage ? '' : `<div style="font-size:2.6rem;">${getIcon(item)}</div>`;
+                const mask = `<div class="thumb-hover-mask">${isFolder ? '📂 Open' : '👁 Preview'}</div>`;
+
+                return `<div class="fm-card${isFolder?' folder':''}"
+                    data-id="${item.id}"
+                    ondblclick="onCardDblClick(${item.id})"
+                    oncontextmenu="showCtx(event,${item.id})">
+                    ${isFolder ? `<div class="fm-card-badge">Folder</div>` : ''}
+                    <div class="fm-card-thumb">${thumb}${icon}${mask}</div>
+                    <div class="fm-card-body">
+                        <div class="fm-card-name" title="${esc(item.original_name)}">${esc(item.original_name)}</div>
+                        <div class="fm-card-meta">
+                            <span>${isFolder ? '—' : fmtSize(item.file_size)}</span>
+                            <span>${fmtDate(item.createdAt || item.created_at)}</span>
+                        </div>
                     </div>
-                    <div class="file-actions">
-                        <div class="action-icon" onclick="downloadFile(${file.id})" title="Download">💾</div>
-                        <div class="action-icon" onclick="deleteFile(${file.id})" title="Delete" style="margin-left: auto;">🗑️</div>
+                </div>`;
+            }).join('')}</div>`;
+        }
+
+        function renderList(items) {
+            const header = `<div class="fm-list-row" style="cursor:default; opacity:0.4; padding-bottom:4px; border-bottom:1px solid var(--border); margin-bottom:4px;">
+                <div class="lrow-icon"></div>
+                <div class="lrow-name" style="font-size:0.6rem; letter-spacing:1.5px; text-transform:uppercase;">Name</div>
+                <div class="lrow-size" style="font-size:0.6rem; letter-spacing:1.5px; text-transform:uppercase;">Size</div>
+                <div class="lrow-date" style="font-size:0.6rem; letter-spacing:1.5px; text-transform:uppercase;">Date</div>
+                <div style="width:80px;"></div>
+            </div>`;
+            const rows = items.map(item => {
+                const isFolder = item.is_folder;
+                return `<div class="fm-list-row" oncontextmenu="showCtx(event,${item.id})" ondblclick="onCardDblClick(${item.id})">
+                    <div class="lrow-icon">${getIcon(item)}</div>
+                    <div class="lrow-name">${esc(item.original_name)}</div>
+                    <div class="lrow-size">${isFolder ? '—' : fmtSize(item.file_size)}</div>
+                    <div class="lrow-date">${fmtDate(item.createdAt || item.created_at)}</div>
+                    <div class="lrow-actions">
+                        ${!isFolder ? `<button class="lrow-btn" onclick="event.stopPropagation();download(${item.id})" title="Download">⬇</button>
+                        <button class="lrow-btn" onclick="event.stopPropagation();doShare(${item.id})" title="Share">🔗</button>` : ''}
+                        <button class="lrow-btn danger" onclick="event.stopPropagation();doDelete(${item.id})" title="Delete">🗑</button>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
+            return `<div class="fm-list">${header}${rows}</div>`;
         }
 
-        function getFileIcon(mime) {
-            if (!mime) return '📄';
-            if (mime.startsWith('image/')) return '🖼️';
-            if (mime.startsWith('video/')) return '🎥';
-            if (mime.includes('pdf')) return '📕';
-            if (mime.includes('word')) return '📘';
-            if (mime.includes('excel') || mime.includes('spreadsheet')) return '📗';
-            if (mime.includes('zip') || mime.includes('rar')) return '📦';
-            return '📄';
+        // ── Breadcrumb ───────────────────────────────────────
+        function updateBreadcrumb() {
+            let html = `<div class="bc-item${folderStack.length===0?' active':''}" onclick="goRoot()">🏠 Root</div>`;
+            folderStack.forEach((c, i) => {
+                html += `<span class="bc-sep">/</span><div class="bc-item${i===folderStack.length-1?' active':''}" onclick="jumpTo(${i})">${esc(c.name)}</div>`;
+            });
+            document.getElementById('breadcrumb').innerHTML = html;
+            const title = folderStack.length ? folderStack[folderStack.length-1].name.toUpperCase() : 'MY FILES';
+            document.getElementById('headerTitle').textContent = '📁 ' + title;
         }
 
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        function updateDropzoneHint() {
+            const hint = folderStack.length ? folderStack[folderStack.length-1].name : 'Root';
+            document.getElementById('dropzoneTargetHint').textContent = '→ ' + hint;
         }
 
-        function updateUsage(files) {
-            const total = files.reduce((acc, f) => acc + parseInt(f.file_size), 0);
-            usageText.textContent = `Total Usage: ${formatFileSize(total)}`;
+        function updateStorageBar() {
+            const total = allItems.filter(f=>!f.is_folder).reduce((a,f)=>a+(parseInt(f.file_size)||0), 0);
+            document.getElementById('storageUsed').textContent = fmtSize(total);
+            // Fake 10GB max bar
+            const pct = Math.min((total / (10*1024*1024*1024)) * 100, 100);
+            document.getElementById('storageBar').style.width = pct + '%';
         }
 
-        function filterFiles(type) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+        // ── Quick Access ─────────────────────────────────────
+        function setQuickAccess(type) {
+            quickFilter = type;
+            document.querySelectorAll('.fm-nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('nav-' + type)?.classList.add('active');
+            render();
+        }
 
-            if (type === 'all') {
-                renderFiles(allFiles);
-            } else if (type === 'image') {
-                renderFiles(allFiles.filter(f => f.mime_type?.startsWith('image/')));
-            } else if (type === 'document') {
-                renderFiles(allFiles.filter(f => f.mime_type?.includes('pdf') || f.mime_type?.includes('word') || f.mime_type?.includes('text')));
+        // ── View Toggle ──────────────────────────────────────
+        function setView(mode, el) {
+            viewMode = mode;
+            document.querySelectorAll('.fm-view-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            render();
+        }
+
+        function handleSearch(val) { searchQuery = val.toLowerCase().trim(); render(); }
+
+        // ── Double Click ─────────────────────────────────────
+        function onCardDblClick(id) {
+            const item = allItems.find(f => f.id === id);
+            if (!item) return;
+            if (item.is_folder) openFolder(item);
+            else openPreview(item);
+        }
+
+        // ── Context Menu ─────────────────────────────────────
+        function showCtx(e, id) {
+            e.preventDefault();
+            ctxTarget = allItems.find(f => f.id === id);
+            if (!ctxTarget) return;
+            const isFolder = ctxTarget.is_folder;
+            document.getElementById('ctx-open').style.display    = isFolder ? '' : 'none';
+            document.getElementById('ctx-preview').style.display = isFolder ? 'none' : '';
+            const menu = document.getElementById('ctxMenu');
+            menu.style.left = Math.min(e.clientX, window.innerWidth  - 220) + 'px';
+            menu.style.top  = Math.min(e.clientY, window.innerHeight - 220) + 'px';
+            menu.classList.add('open');
+        }
+        document.addEventListener('click', () => document.getElementById('ctxMenu').classList.remove('open'));
+
+        function ctxDo(action) {
+            document.getElementById('ctxMenu').classList.remove('open');
+            if (!ctxTarget) return;
+            switch(action) {
+                case 'open':     if(ctxTarget.is_folder) openFolder(ctxTarget); break;
+                case 'preview':  openPreview(ctxTarget); break;
+                case 'download': download(ctxTarget.id); break;
+                case 'share':    doShare(ctxTarget.id); break;
+                case 'rename':   doRename(ctxTarget); break;
+                case 'delete':   doDelete(ctxTarget.id); break;
+            }
+        }
+
+        // ── Share ────────────────────────────────────────────
+        async function doShare(id) {
+            const item = allItems.find(f => f.id === id);
+            if (!item) return;
+            document.getElementById('shareModalTitle').textContent = (item.is_folder ? '📁 ' : '🔗 ') + 'Share "' + item.original_name + '"';
+            document.getElementById('shareLinkText').textContent = 'Generating secure link...';
+            openModal('shareModal');
+            try {
+                // Same endpoint for files AND folders — backend detects is_folder automatically
+                const res = await apiService.post(`/storage/share/${id}`, { expires_in_days: 7 });
+                const link = res.share_url || res.shareUrl || res.link || '';
+                document.getElementById('shareLinkText').textContent = link || 'Link generated — check backend';
+            } catch (err) {
+                document.getElementById('shareLinkText').textContent = '⚠️ Error: ' + (err.message || 'Failed');
+            }
+        }
+
+        function copyShareLink() {
+            const text = document.getElementById('shareLinkText').textContent;
+            if (text.startsWith('⚠️') || text.startsWith('Gen')) return;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => toast('✅ Link copied to clipboard!'));
             } else {
-                renderFiles(allFiles.filter(f => !f.mime_type?.startsWith('image/') && !f.mime_type?.includes('pdf') && !f.mime_type?.includes('word')));
+                const ta = document.createElement('textarea');
+                ta.value = text; document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta);
+                toast('✅ Link copied!');
             }
         }
 
-        // Upload Handlers
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        // ── New Folder ───────────────────────────────────────
+        function showNewFolderModal() {
+            inputModalMode = 'folder'; renameTarget = null;
+            document.getElementById('inputModalTitle').textContent = '📁 New Folder';
+            document.getElementById('inputModalField').value = '';
+            openModal('inputModal');
+            setTimeout(() => document.getElementById('inputModalField').focus(), 120);
+        }
 
-        dropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropzone.classList.add('dragover');
-        });
+        function doRename(item) {
+            inputModalMode = 'rename'; renameTarget = item;
+            document.getElementById('inputModalTitle').textContent = '✏️ Rename "' + item.original_name + '"';
+            document.getElementById('inputModalField').value = item.original_name;
+            openModal('inputModal');
+            setTimeout(() => { const f = document.getElementById('inputModalField'); f.focus(); f.select(); }, 120);
+        }
 
-        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropzone.classList.remove('dragover');
-            handleFiles(e.dataTransfer.files);
-        });
-
-        async function handleFiles(files) {
-            if (files.length === 0) return;
-
-            progressContainer.style.display = 'block';
-            progressLabel.style.display = 'block';
-
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                progressLabel.textContent = `Uploading [${i + 1}/${files.length}]: ${file.name}`;
-
+        async function confirmInput() {
+            const val = document.getElementById('inputModalField').value.trim();
+            if (!val) return;
+            closeModal('inputModal');
+            if (inputModalMode === 'folder') {
                 try {
-                    await storageService.uploadFile(file, (percent) => {
-                        progressBar.style.width = percent + '%';
-                    });
-                } catch (err) {
-                    alert('Upload failed: ' + err.message);
-                }
+                    await storageService.createFolder(val, currentFolderId);
+                    toast('📁 Folder created!');
+                    await loadFolder(currentFolderId);
+                } catch(e) { toast('❌ Failed: ' + e.message); }
+            } else if (inputModalMode === 'rename' && renameTarget) {
+                try {
+                    await apiService.put(`/storage/${renameTarget.id}/rename`, { new_name: val });
+                    toast('✅ Renamed!');
+                    await loadFolder(currentFolderId);
+                } catch(e) { toast('❌ Rename failed'); }
             }
-
-            progressBar.style.width = '0%';
-            progressContainer.style.display = 'none';
-            progressLabel.style.display = 'none';
-            await loadFiles();
         }
 
-        async function downloadFile(id) {
+        // ── Download ─────────────────────────────────────────
+        function download(id) {
             const url = storageService.getDownloadUrl(id);
             if (url) window.open(url + '&download=true');
         }
 
-        async function deleteFile(id) {
-            if (!confirm('Permanent deletion authorized?')) return;
+        // ── Delete ───────────────────────────────────────────
+        async function doDelete(id) {
+            const item = allItems.find(f => f.id === id);
+            if (!confirm(`Delete "${item?.original_name}"?`)) return;
             try {
                 await storageService.deleteFile(id);
-                await loadFiles();
-            } catch (err) {
-                alert('Deletion failed: ' + err.message);
-            }
+                allItems = allItems.filter(f => f.id !== id);
+                render();
+                toast('🗑️ Deleted');
+            } catch(e) { toast('❌ Delete failed'); }
         }
 
-        // Navigation
-        function openDashboard() { window.location.href = 'dashboard.html'; }
-        function openChat() { window.location.href = 'chat.html'; }
-        function openForms() { window.location.href = 'forms.html'; }
+        // ── Upload ───────────────────────────────────────────
+        function handleFileInputChange(files) { uploadFiles(Array.from(files)); }
+
+        const dropzone = document.getElementById('dropzone');
+        dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); uploadFiles(Array.from(e.dataTransfer.files)); });
+
+        async function uploadFiles(files) {
+            if (!files.length) return;
+            const prog = document.getElementById('uploadProgress');
+            const bar  = document.getElementById('uploadProgressBar');
+            prog.style.display = 'block';
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                toast(`⬆ Uploading [${i+1}/${files.length}] ${f.name}...`);
+                try {
+                    await storageService.uploadFile(f, pct => { bar.style.width = pct + '%'; }, currentFolderId);
+                } catch(e) { toast('❌ Upload failed: ' + e.message); }
+            }
+            bar.style.width = '0%'; prog.style.display = 'none';
+            await loadFolder(currentFolderId);
+            toast('✅ Upload complete!');
+        }
+
+        // ── Preview ──────────────────────────────────────────
+        function openPreview(item) {
+            const url = storageService.getDownloadUrl(item.id);
+            const mime = item.mime_type || '';
+            const content = document.getElementById('previewContent');
+            if (mime.startsWith('image/')) {
+                content.innerHTML = `<img src="${url}" alt="${esc(item.original_name)}" style="max-width:88vw;max-height:76vh;border-radius:10px;object-fit:contain;">`;
+            } else if (mime.includes('pdf')) {
+                content.innerHTML = `<iframe src="${url}" style="width:88vw;height:76vh;border:none;border-radius:10px;background:#fff;"></iframe>`;
+            } else {
+                content.innerHTML = `<div style="text-align:center;padding:50px;">
+                    <div style="font-size:4rem; margin-bottom:16px;">${getIcon(item)}</div>
+                    <p style="color:rgba(255,255,255,0.5); font-size:0.8rem; margin-bottom:20px;">No preview available</p>
+                    <button class="btn-accent" style="border:none;cursor:pointer;" onclick="download(${item.id})">⬇ Download File</button>
+                </div>`;
+            }
+            document.getElementById('previewFilename').textContent = item.original_name;
+            document.getElementById('previewDlBtn').href = url + '&download=true';
+            document.getElementById('previewOverlay').classList.add('open');
+        }
+        function closePreview() { document.getElementById('previewOverlay').classList.remove('open'); }
+
+        // ── Helpers ──────────────────────────────────────────
+        function getIcon(item) {
+            if (item.is_folder) return '📁';
+            const m = item.mime_type || '';
+            if (m.startsWith('image/')) return '🖼️';
+            if (m.startsWith('video/')) return '🎬';
+            if (m.startsWith('audio/')) return '🎵';
+            if (m.includes('pdf')) return '📕';
+            if (m.includes('word') || m.includes('document')) return '📝';
+            if (m.includes('sheet') || m.includes('excel')) return '📊';
+            if (m.includes('zip') || m.includes('rar')) return '🗜️';
+            return '📄';
+        }
+        function fmtSize(b) { if (!b) return '—'; const k=1024,s=['B','KB','MB','GB'],i=Math.floor(Math.log(b)/Math.log(k)); return parseFloat((b/Math.pow(k,i)).toFixed(1))+' '+s[i]; }
+        function fmtDate(d) { return d ? new Date(d).toLocaleDateString() : '—'; }
+        function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        // ── Toast ────────────────────────────────────────────
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg;
+            t.style.display = 'block'; clearTimeout(t._timer);
+            t._timer = setTimeout(() => { t.style.display = 'none'; }, 2800);
+        }
+
+        // ── Modal helpers ─────────────────────────────────────
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+        // ── Loading / Error ──────────────────────────────────
+        function showLoading() { document.getElementById('filesArea').innerHTML = '<div class="fm-empty"><div class="spinner"></div><p>Loading...</p></div>'; }
+        function showError(msg) { document.getElementById('filesArea').innerHTML = `<div class="fm-empty"><div class="icon">⚠️</div><p>${msg}</p></div>`; }
+
+        // ── Electron / Nav ────────────────────────────────────
+        function nav(page) { window.location.href = page; }
         function minimizeToTray() { ipcRenderer.send('MINIMIZE_TO_TRAY'); }
         function logout() { localStorage.clear(); window.location.href = 'login.html'; }
-        init().then(() => {
-            // Admin control link moved to web
+
+        // ── Keyboard shortcuts ────────────────────────────────
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { closePreview(); closeModal('shareModal'); closeModal('inputModal'); }
+            if (e.key === 'F5') { loadFolder(currentFolderId); }
         });
+
+        init();
     </script>
 </body>
-
 </html>
