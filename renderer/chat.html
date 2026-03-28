@@ -371,56 +371,250 @@
             </div>
         </div>
 
-        <!-- Advanced Profile Modal -->
-        <div id="profileOverlay" class="modal-overlay">
-            <div class="profile-modal-content">
-                <div class="profile-header-banner">
-                    <div onclick="closeProfile()"
-                        style="position: absolute; top: 20px; right: 25px; cursor: pointer; font-size: 1.5rem; color: #fff; opacity: 0.8; z-index: 100; -webkit-app-region: no-drag; transition: opacity 0.2s;"
-                        onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
-                        &times;</div>
+        <!-- Advanced Profile Modal — REDESIGNED -->
+        <div id="profileOverlay" class="modal-overlay" style="backdrop-filter: blur(12px); background: rgba(0,0,0,0.85);">
+            <div id="profileModalCard" style="
+                width: 480px;
+                background: #0f131a;
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 24px;
+                overflow: hidden;
+                box-shadow: 0 40px 100px -20px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,163,255,0.05);
+                position: relative;
+                -webkit-app-region: no-drag;
+                animation: profileModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            ">
+                <style>
+                    @keyframes profileModalIn {
+                        from { opacity: 0; transform: translateY(15px) scale(0.98); }
+                        to   { opacity: 1; transform: translateY(0)   scale(1); }
+                    }
+                    #profileModalCard .pm-input {
+                        width: 100%;
+                        background: rgba(0,0,0,0.3);
+                        border: 1px solid rgba(255,255,255,0.06);
+                        border-radius: 10px;
+                        padding: 14px 16px;
+                        color: #fff;
+                        font-size: 0.85rem;
+                        font-family: inherit;
+                        font-weight: 500;
+                        outline: none;
+                        transition: all 0.2s ease;
+                        box-sizing: border-box;
+                    }
+                    #profileModalCard .pm-input::placeholder {
+                        color: rgba(255,255,255,0.3);
+                    }
+                    #profileModalCard .pm-input:focus {
+                        border-color: rgba(0,163,255,0.4);
+                        background: rgba(0,0,0,0.5);
+                        box-shadow: 0 0 0 4px rgba(0,163,255,0.05);
+                    }
+                    #profileModalCard .pm-label {
+                        font-size: 0.6rem;
+                        font-weight: 800;
+                        letter-spacing: 0.1em;
+                        text-transform: uppercase;
+                        color: rgba(255,255,255,0.4);
+                        margin-bottom: 8px;
+                        display: block;
+                    }
+                    #profileModalCard .status-card {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 10px;
+                        padding: 16px 10px;
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.04);
+                        background: rgba(255,255,255,0.02);
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        font-size: 0.7rem;
+                        font-weight: 700;
+                        letter-spacing: 0.05em;
+                        text-transform: uppercase;
+                        color: rgba(255,255,255,0.4);
+                        -webkit-app-region: no-drag;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    #profileModalCard .status-card:hover {
+                        background: rgba(255,255,255,0.04);
+                        border-color: rgba(255,255,255,0.1);
+                        color: rgba(255,255,255,0.8);
+                        transform: translateY(-2px);
+                    }
+                    #profileModalCard .status-card.active-available {
+                        background: rgba(34,197,94,0.08);
+                        border-color: rgba(34,197,94,0.4);
+                        color: #4ade80;
+                    }
+                    #profileModalCard .status-card.active-idle {
+                        background: rgba(234,179,8,0.08);
+                        border-color: rgba(234,179,8,0.4);
+                        color: #facc15;
+                    }
+                    #profileModalCard .status-card.active-busy {
+                        background: rgba(239,68,68,0.08);
+                        border-color: rgba(239,68,68,0.4);
+                        color: #f87171;
+                    }
+                    #profileModalCard .pm-save-btn {
+                        width: 100%;
+                        padding: 16px;
+                        background: #0088cc;
+                        background: linear-gradient(135deg, #00A3FF, #0066cc);
+                        border: 1px solid rgba(0,163,255,0.5);
+                        border-radius: 12px;
+                        color: #fff;
+                        font-size: 0.85rem;
+                        font-weight: 800;
+                        letter-spacing: 0.1em;
+                        text-transform: uppercase;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 4px 15px rgba(0,100,204,0.3), inset 0 1px 1px rgba(255,255,255,0.2);
+                        -webkit-app-region: no-drag;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    #profileModalCard .pm-save-btn:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 8px 25px rgba(0,100,204,0.5), inset 0 1px 1px rgba(255,255,255,0.3);
+                        filter: brightness(1.1);
+                    }
+                    #profileModalCard .pm-save-btn:active { transform: translateY(0); }
+                    .pm-status-dot {
+                        width: 12px; height: 12px;
+                        border-radius: 50%;
+                        flex-shrink: 0;
+                        box-shadow: 0 0 0 2px rgba(0,0,0,0.3), 0 0 8px currentColor;
+                    }
+                    .pm-status-dot.available { background: #22c55e; color: #22c55e; }
+                    .pm-status-dot.idle      { background: #eab308; color: #eab308; }
+                    .pm-status-dot.busy      { background: #ef4444; color: #ef4444; }
+                </style>
+
+                <!-- Animated Banner -->
+                <div style="height: 100px; position: relative; overflow: hidden; background: #001f3f;">
+                    <div style="
+                        position: absolute; inset: 0;
+                        background: radial-gradient(ellipse at top right, rgba(0,163,255,0.4) 0%, transparent 60%),
+                                    radial-gradient(ellipse at bottom left, rgba(0,80,255,0.3) 0%, transparent 60%);
+                    "></div>
+                    <!-- Grid overlay -->
+                    <div style="
+                        position: absolute; inset: 0;
+                        background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                                          linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+                        background-size: 20px 20px;
+                        opacity: 0.6;
+                    "></div>
+                    <!-- Close button -->
+                    <button onclick="closeProfile()" style="
+                        position:absolute; top:20px; right:20px;
+                        width:30px; height:30px;
+                        background:var(--bg-surface-glass);
+                        border:1px solid var(--border-glass);
+                        border-radius:50%;
+                        color:var(--text-muted);
+                        font-size:1.2rem;
+                        cursor:pointer;
+                        display:flex;align-items:center;justify-content:center;
+                        transition:all 0.2s;
+                        -webkit-app-region:no-drag;
+                        padding-bottom:2px;
+                    " onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='#fff'"
+                       onmouseout="this.style.background='var(--bg-surface-glass)';this.style.color='var(--text-muted)'">&times;</button>
                 </div>
-                <div class="profile-modal-body">
-                    <div class="profile-pfp-large" id="modalUserInitials">U</div>
-                    <h2 id="modalUserName"
-                        style="margin: 0; font-size: 1.8rem; color: #fff; font-weight: 950; letter-spacing: -1px; text-transform: uppercase;">
-                        Full Name</h2>
-                    <p id="modalUserRole"
-                        style="margin: 8px 0 35px; font-size: 0.75rem; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 4px; font-weight: 900; opacity: 0.9;">
-                        Job Title</p>
 
-                    <div class="dna-section">
-                        <label class="glass-label">Bio</label>
-                        <textarea id="profileBioInput" class="glass-field"
-                            style="height: 100px; resize: none; margin-bottom: 24px;"
-                            placeholder="Tell colleagues about your role..." maxlength="200"></textarea>
-
-                        <label class="glass-label" style="color: var(--accent-blue);">Status Message</label>
-                        <input id="profileCustomStatusInput" class="glass-field" placeholder="What's happening?"
-                            maxlength="60" />
+                <!-- Avatar & Header -->
+                <div style="display:flex;align-items:center;gap:20px;padding:0 30px;margin-top:-40px;margin-bottom:24px;">
+                    <div style="position:relative;flex-shrink:0;">
+                        <!-- Thin Glow ring -->
+                        <div style="
+                            position:absolute;inset:-3px;
+                            border-radius:50%;
+                            background: conic-gradient(from 0deg, #00A3FF, #0044cc, #00A3FF);
+                            animation: spin 3s linear infinite;
+                            z-index: 1;
+                        "></div>
+                        <!-- Solid background ring to hide gap -->
+                        <div style="
+                            position:absolute;inset:-1px;
+                            border-radius:50%;
+                            background: #0f131a;
+                            z-index: 2;
+                        "></div>
+                        <style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+                        <div id="modalUserInitials" style="
+                            position:relative;
+                            z-index: 3;
+                            width:80px; height:80px;
+                            border-radius:50%;
+                            background: #151a23;
+                            border: 2px solid transparent; /* let inner ring show */
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:2rem;font-weight:900;color:#fff;
+                            overflow:hidden;
+                            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+                        ">U</div>
                     </div>
+                    <div style="padding-top:40px; /* offset the negative margin */ ">
+                        <h2 id="modalUserName" style="margin:0;font-size:1.4rem;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1.2;">Full Name</h2>
+                        <p id="modalUserRole" style="margin:2px 0 0;font-size:0.65rem;color:#00A3FF;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;">Job Title</p>
+                    </div>
+                </div>
 
-                    <div style="text-align: left; margin-bottom: 40px; padding: 0 10px;">
-                        <label class="glass-label">Availability</label>
-                        <div class="protocol-grid">
-                            <button type="button" class="status-btn" id="status-available"
-                                onclick="selectStatus('available')">
-                                <div class="status-dot available"></div> <span data-status="available">Online</span>
-                            </button>
-                            <button type="button" class="status-btn" id="status-idle" onclick="selectStatus('idle')">
-                                <div class="status-dot idle"></div> <span data-status="idle">Idle</span>
-                            </button>
-                            <button type="button" class="status-btn" id="status-busy" onclick="selectStatus('busy')">
-                                <div class="status-dot busy"></div> <span data-status="busy">Working</span>
-                            </button>
+                <!-- Body Controls -->
+                <div style="padding:0 30px 30px;">
+                    <!-- Bio + Status Message -->
+                    <div style="display:flex; gap:16px; margin-bottom:24px;">
+                        <div style="flex:1;">
+                            <label class="pm-label">Biography</label>
+                            <textarea id="profileBioInput" class="pm-input" style="height:90px;resize:none;" placeholder="Tell your team what you do..." maxlength="200"></textarea>
+                        </div>
+                        <div style="flex:1;">
+                            <label class="pm-label">Status Message</label>
+                            <input id="profileCustomStatusInput" class="pm-input" placeholder="What's happening?" maxlength="60" style="margin-bottom:12px;" />
+                            
+                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);padding:8px 12px;border-radius:8px;display:flex;gap:8px;align-items:center;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                <span style="font-size:0.6rem;color:rgba(255,255,255,0.3);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Visible to all members</span>
+                            </div>
                         </div>
                     </div>
 
-                    <button class="tactical-btn btn-primary" id="saveProfileBtn" onclick="saveProfile()"
-                        style="height: 60px; border-radius: 20px;">Save Profile</button>
+                    <!-- Availability -->
+                    <label class="pm-label" style="margin-bottom:12px;">Current Status</label>
+                    <div style="display:flex;gap:12px;margin-bottom:28px;">
+                        <button type="button" class="status-card" id="status-available" onclick="selectStatus('available')">
+                            <div class="pm-status-dot available"></div>
+                            Online
+                        </button>
+                        <button type="button" class="status-card" id="status-idle" onclick="selectStatus('idle')">
+                            <div class="pm-status-dot idle"></div>
+                            Idle
+                        </button>
+                        <button type="button" class="status-card" id="status-busy" onclick="selectStatus('busy')">
+                            <div class="pm-status-dot busy"></div>
+                            Working
+                        </button>
+                    </div>
+
+                    <!-- Save Action -->
+                    <button class="pm-save-btn" id="saveProfileBtn" onclick="saveProfile()">
+                        ✦ Update Profile
+                    </button>
                 </div>
             </div>
         </div>
+
 
         <!-- Rename Modal -->
         <div id="renameModal" class="modal-overlay">
@@ -624,12 +818,13 @@
                 // 3. Initial UI Setup
                 updateSidebarProfile();
 
-                // 4. Connect Services
-                socketService.connect();
+                // 4. Setup handlers FIRST, then connect (avoids missing early 'connected' event)
                 setupSocketHandlers();
+                socketService.connect();
 
-                // 5. Load Content
+                // 5. Load Content, then join rooms once we have room IDs
                 await loadRooms();
+                joinAllRooms(); // <-- safe: called after rooms are populated
 
                 // 6. Setup Event Listeners
                 messageInput.addEventListener('keydown', (e) => {
@@ -692,7 +887,9 @@
         function setupSocketHandlers() {
             socketService.on('connected', () => {
                 console.log('✅ Socket connected event received');
-                joinAllRooms();
+                // Only join if rooms are already loaded (fast reconnect scenario)
+                // If rooms aren't loaded yet, joinAllRooms() will be called after loadRooms()
+                if (rooms.length > 0) joinAllRooms();
             });
 
             socketService.on('message', (data) => {
@@ -1384,16 +1581,20 @@
         }
 
         window.selectStatus = function (status) {
-            console.log('💎 ULTRA FINAL selectStatus for:', status);
+            console.log('💎 selectStatus for:', status);
             window.currentStatus = status;
 
-            // UI Update
-            document.querySelectorAll('.status-btn').forEach(btn => {
-                btn.classList.remove('active');
+            // Clear all active states from new status-card buttons
+            document.querySelectorAll('.status-card').forEach(btn => {
+                btn.classList.remove('active-available', 'active-idle', 'active-busy');
             });
+            // Also clear old .status-btn .active in case legacy elements exist
+            document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+
+            // Apply correct active class
             const target = document.getElementById(`status-${status}`);
             if (target) {
-                target.classList.add('active');
+                target.classList.add(`active-${status}`);
                 console.log('🎯 UI ACTIVE set for:', status);
             }
         }
