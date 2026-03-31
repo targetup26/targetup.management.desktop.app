@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, dialog } = require('electron');
 const path = require('path');
 const io = require('socket.io-client');
+const activityTracker = require('./services/activity-tracker.service');
 
 // Disable hardware acceleration to prevent GPU errors
 app.disableHardwareAcceleration();
@@ -116,6 +117,15 @@ app.on('window-all-closed', () => {
     }
 });
 
+// Auto-checkout on quit (best-effort — server-side cron handles crashes)
+app.on('before-quit', () => {
+    app.isQuitting = true;
+    activityTracker.stop();
+    if (mainWindow) {
+        mainWindow.webContents.send('FORCE_CHECKOUT');
+    }
+});
+
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
@@ -125,6 +135,50 @@ app.on('activate', () => {
 // IPC Handlers
 ipcMain.handle('NAVIGATE', (event, page) => {
     mainWindow.loadFile(`renderer/${page}.html`);
+});
+
+// ─── Activity Tracking IPC ────────────────────────────────────────────────────
+
+// Start tracking after check-in
+ipcMain.on('START_TRACKING', () => {
+    activityTracker.start();
+    console.log('[Main] Activity tracking started');
+});
+
+// Stop tracking on checkout
+ipcMain.on('STOP_TRACKING', () => {
+    activityTracker.stop();
+    console.log('[Main] Activity tracking stopped');
+});
+
+// Renderer reports mouse/keyboard event
+ipcMain.on('RECORD_ACTIVITY', () => {
+    activityTracker.recordActivity();
+});
+
+// Renderer requests current snapshot (every 30s)
+ipcMain.handle('GET_ACTIVITY_SNAPSHOT', () => {
+    return activityTracker.getSnapshot();
+});
+
+// Renderer requests queued offline snapshots
+ipcMain.handle('GET_QUEUED_SNAPSHOTS', () => {
+    return activityTracker.readQueue();
+});
+
+// Renderer confirms queue flushed
+ipcMain.on('CLEAR_ACTIVITY_QUEUE', () => {
+    activityTracker.clearQueue();
+});
+
+// Renderer reports a failed snapshot → queue it locally
+ipcMain.on('QUEUE_ACTIVITY_SNAPSHOT', (event, snapshot) => {
+    activityTracker.queueSnapshot(snapshot);
+});
+
+// Privacy notice is handled by a custom modal in the renderer (not native dialog)
+ipcMain.handle('SHOW_TRACKING_NOTICE', async () => {
+    return true; // Renderer shows its own styled modal before calling this
 });
 
 ipcMain.handle('GET_APP_VERSION', () => {

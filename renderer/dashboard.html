@@ -178,8 +178,23 @@
             </div>
         </div>
 
-        <div id="toastContainer" class="toast-container"></div>
+        <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Privacy Notice Modal -->
+    <div id="privacyModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.75); backdrop-filter:blur(12px); display:none; align-items:center; justify-content:center;">
+        <div style="background:linear-gradient(135deg,rgba(20,27,45,0.97) 0%,rgba(15,20,38,0.99) 100%); border:1px solid rgba(0,163,255,0.2); border-radius:20px; padding:36px; max-width:420px; width:90%; box-shadow:0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04); text-align:center;">
+            <div style="width:56px;height:56px;background:rgba(0,163,255,0.1);border:1px solid rgba(0,163,255,0.3);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:1.8rem;">🛡️</div>
+            <h3 style="color:#fff;font-size:1.1rem;font-weight:800;margin:0 0 10px;letter-spacing:-0.3px;">Activity Monitoring Active</h3>
+            <p style="color:rgba(255,255,255,0.5);font-size:0.78rem;line-height:1.6;margin:0 0 8px;">This session tracks your <span style="color:#00a3ff;font-weight:600;">active &amp; idle time</span> and the <span style="color:#00a3ff;font-weight:600;">name of the active app</span>.</p>
+            <p style="color:rgba(255,255,255,0.3);font-size:0.72rem;margin:0 0 28px;">No screen recordings, screenshots, or keystrokes are captured.</p>
+            <button onclick="confirmPrivacyNotice()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066cc,#00a3ff);border:none;border-radius:12px;color:#fff;font-size:0.85rem;font-weight:800;letter-spacing:0.5px;cursor:pointer;box-shadow:0 8px 24px rgba(0,163,255,0.3);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 12px 32px rgba(0,163,255,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 24px rgba(0,163,255,0.3)'">
+                ✓ &nbsp;Understood, Start Tracking
+            </button>
+        </div>
     </div>
+
+</div>
 
     <script>
         // Expose ipcRenderer + window controls globally FIRST before anything else
@@ -232,6 +247,85 @@
         let currentStatus = 'OFF_DUTY';
         let isOnBreak = false;
         let breakInterval = null;
+
+        // ─── Activity Tracking ───────────────────────────────────────────────────
+        let _activityDispatchInterval = null;
+        let _trackingNoticeSeen = false;
+        let _privacyResolve = null; // holds the resolve fn while modal is open
+
+        // Called by the modal button
+        function confirmPrivacyNotice() {
+            document.getElementById('privacyModal').style.display = 'none';
+            if (_privacyResolve) { _privacyResolve(); _privacyResolve = null; }
+        }
+
+        /** Show the custom privacy modal and wait for user confirmation */
+        function showPrivacyModal() {
+            return new Promise((resolve) => {
+                _privacyResolve = resolve;
+                const modal = document.getElementById('privacyModal');
+                modal.style.display = 'flex';
+            });
+        }
+
+        /** Start the tracker + 30s dispatch loop after check-in */
+        async function startActivityTracking() {
+            // Show privacy notice once per app session
+            if (!_trackingNoticeSeen) {
+                _trackingNoticeSeen = true;
+                await showPrivacyModal(); // custom modal
+            }
+            ipcRenderer.send('START_TRACKING');
+
+            // Try to flush any queued snapshots from previous offline period
+            try {
+                const queued = await ipcRenderer.invoke('GET_QUEUED_SNAPSHOTS');
+                if (queued && queued.length > 0) {
+                    await apiService.flushActivityQueue(queued);
+                    ipcRenderer.send('CLEAR_ACTIVITY_QUEUE');
+                    console.log(`[Activity] Flushed ${queued.length} queued snapshots`);
+                }
+            } catch (e) { /* silently ignore flush failure */ }
+
+            // 30-second dispatch loop
+            _activityDispatchInterval = setInterval(async () => {
+                try {
+                    const snapshot = await ipcRenderer.invoke('GET_ACTIVITY_SNAPSHOT');
+                    await apiService.sendActivitySnapshot(snapshot);
+                } catch (err) {
+                    // Network failure → queue snapshot for later
+                    console.warn('[Activity] Snapshot failed, queuing:', err.message);
+                    try {
+                        const snapshot = await ipcRenderer.invoke('GET_ACTIVITY_SNAPSHOT');
+                        ipcRenderer.send('QUEUE_ACTIVITY_SNAPSHOT', snapshot);
+                    } catch (_) { /* ignore */ }
+                }
+            }, 30000);
+        }
+
+        /** Stop the tracker + dispatch loop on check-out */
+        async function stopActivityTracking() {
+            if (_activityDispatchInterval) {
+                clearInterval(_activityDispatchInterval);
+                _activityDispatchInterval = null;
+            }
+            try {
+                const snapshot = await ipcRenderer.invoke('GET_ACTIVITY_SNAPSHOT');
+                await apiService.forceActivityCheckout(snapshot);
+            } catch (e) { console.warn('[Activity] Final checkout failed:', e.message); }
+            ipcRenderer.send('STOP_TRACKING');
+        }
+
+        // Handle force checkout from main process (before-quit / crash recovery)
+        ipcRenderer.on('FORCE_CHECKOUT', async () => {
+            console.log('[Activity] Force checkout triggered');
+            await stopActivityTracking();
+        });
+
+        // Relay mouse + keyboard activity to main process tracker
+        document.addEventListener('mousemove', () => ipcRenderer.send('RECORD_ACTIVITY'), { passive: true });
+        document.addEventListener('keydown',   () => ipcRenderer.send('RECORD_ACTIVITY'), { passive: true });
+        // ─────────────────────────────────────────────────────────────────────────
 
         function updateClock() {
             const now = new Date();
@@ -384,6 +478,8 @@
                 const ip = await DeviceService.getCurrentIP();
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
                 await apiService.checkIn(deviceInfo.device_fingerprint, ip, user.employee_id);
+                // Start activity tracking after successful check-in
+                startActivityTracking();
                 // Re-fetch state from backend to ensure accuracy
                 const statusResponse = await apiService.getAttendanceStatus(user.employee_id);
                 updateState(statusResponse);
@@ -401,6 +497,8 @@
                 const deviceInfo = await DeviceService.getDeviceFingerprint();
                 const ip = await DeviceService.getCurrentIP();
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
+                // Stop tracking and send final snapshot before checkout
+                await stopActivityTracking();
                 await apiService.checkOut(deviceInfo.device_fingerprint, ip, user.employee_id);
                 // Re-fetch state from backend to ensure accuracy
                 const statusResponse = await apiService.getAttendanceStatus(user.employee_id);

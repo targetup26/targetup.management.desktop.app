@@ -181,6 +181,30 @@ class ApiService {
         });
     }
 
+    /**
+     * Send a 30-second activity snapshot to the backend.
+     * employee_id is extracted from JWT on the server side.
+     */
+    async sendActivitySnapshot(snapshot) {
+        return await this.request('POST', '/activity/snapshot', snapshot);
+    }
+
+    /**
+     * Force a final checkout with last known metrics.
+     * Called on graceful quit or manual checkout.
+     */
+    async forceActivityCheckout(snapshot) {
+        return await this.request('POST', '/activity/checkout', snapshot);
+    }
+
+    /**
+     * Flush queued offline snapshots to the server in a single batch.
+     * Called when connectivity is restored.
+     */
+    async flushActivityQueue(snapshots) {
+        return await this.request('POST', '/activity/flush-queue', { snapshots });
+    }
+
     async getHeartbeat(deviceFingerprint, ipAddress) {
         return await this.request('POST', '/attendance/heartbeat', {
             device_fingerprint: deviceFingerprint,
