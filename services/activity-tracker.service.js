@@ -56,10 +56,17 @@ class ActivityTracker {
     async _loadActiveWin() {
         if (!this._activeWin) {
             try {
-                this._activeWin = (await import('active-win')).default;
-            } catch (e) {
-                console.warn('[ActivityTracker] active-win not available:', e.message);
-                this._activeWin = null;
+                // Try CJS require first (works better in Electron)
+                this._activeWin = require('active-win');
+            } catch (_) {
+                try {
+                    // Fallback to ESM dynamic import
+                    const mod = await import('active-win');
+                    this._activeWin = mod.default || mod.activeWindow || mod;
+                } catch (e) {
+                    console.warn('[ActivityTracker] active-win not available:', e.message);
+                    this._activeWin = null;
+                }
             }
         }
         return this._activeWin;
@@ -103,9 +110,17 @@ class ActivityTracker {
             const activeWin = await this._loadActiveWin();
             if (!activeWin) return;
 
-            const win = await activeWin();
-            const newApp   = win?.owner?.name  || 'Unknown';
-            const newTitle = win?.title        || 'N/A';
+            // active-win v8+ exports activeWindow (not default)
+            const fn = typeof activeWin === 'function' ? activeWin 
+                     : typeof activeWin.activeWindow === 'function' ? activeWin.activeWindow 
+                     : null;
+            if (!fn) return;
+
+            const win = await fn();
+            if (!win) return;
+
+            const newApp   = win.owner?.name  || 'Unknown';
+            const newTitle = win.title        || 'N/A';
 
             // Window change = activity (watching video, reading, etc.)
             if (newTitle !== this.lastWindowTitle && newTitle !== 'N/A') {
@@ -116,7 +131,7 @@ class ActivityTracker {
             this.windowTitle       = newTitle;
             this.lastWindowTitle   = newTitle;
         } catch (err) {
-            // Silently ignore window polling errors
+            console.warn('[ActivityTracker] Window poll error:', err.message);
         }
     }
 
@@ -157,17 +172,25 @@ class ActivityTracker {
     }
 
     /**
-     * Get a snapshot of current metrics for sending to backend
+     * Get a snapshot of current metrics for sending to backend.
+     * Returns DELTA values (seconds since last snapshot) and resets counters.
+     * This prevents the backend from double-counting accumulated time.
      */
     getSnapshot() {
-        return {
-            status: this.isTracking ? this.status : 'offline',
+        const snap = {
+            status:        this.isTracking ? this.status : 'offline',
             activeSeconds: Math.round(this.activeSeconds),
             idleSeconds:   Math.round(this.idleSeconds),
             currentApp:    this.currentApp  || 'Unknown',
             windowTitle:   this.windowTitle || 'N/A',
             timestamp:     new Date().toISOString()
         };
+
+        // CRITICAL: Reset counters so next snapshot only contains the delta
+        this.activeSeconds = 0;
+        this.idleSeconds   = 0;
+
+        return snap;
     }
 
     // ─── Offline Queue ────────────────────────────────────────────────────────

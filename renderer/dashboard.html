@@ -291,15 +291,14 @@
             _activityDispatchInterval = setInterval(async () => {
                 try {
                     const snapshot = await ipcRenderer.invoke('GET_ACTIVITY_SNAPSHOT');
-                    await apiService.sendActivitySnapshot(snapshot);
-                } catch (err) {
-                    // Network failure → queue snapshot for later
-                    console.warn('[Activity] Snapshot failed, queuing:', err.message);
                     try {
-                        const snapshot = await ipcRenderer.invoke('GET_ACTIVITY_SNAPSHOT');
+                        await apiService.sendActivitySnapshot(snapshot);
+                    } catch (err) {
+                        // Network failure → queue this snapshot for later
+                        console.warn('[Activity] Snapshot failed, queuing:', err.message);
                         ipcRenderer.send('QUEUE_ACTIVITY_SNAPSHOT', snapshot);
-                    } catch (_) { /* ignore */ }
-                }
+                    }
+                } catch (_) { /* ignore */ }
             }, 30000);
         }
 
