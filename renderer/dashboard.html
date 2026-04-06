@@ -289,17 +289,34 @@
 
             // 30-second dispatch loop
             _activityDispatchInterval = setInterval(async () => {
+                console.log('[Activity] ⏱ Dispatch tick fired');
                 try {
                     const snapshot = await ipcRenderer.invoke('GET_ACTIVITY_SNAPSHOT');
+                    console.log('[Activity] 📦 Snapshot:', JSON.stringify(snapshot));
                     try {
-                        await apiService.sendActivitySnapshot(snapshot);
+                        const result = await apiService.sendActivitySnapshot(snapshot);
+                        console.log('[Activity] ✅ Sent OK:', result);
                     } catch (err) {
-                        // Network failure → queue this snapshot for later
-                        console.warn('[Activity] Snapshot failed, queuing:', err.message);
+                        console.error('[Activity] ❌ Send failed:', err.message);
                         ipcRenderer.send('QUEUE_ACTIVITY_SNAPSHOT', snapshot);
                     }
-                } catch (_) { /* ignore */ }
+                } catch (e) {
+                    console.error('[Activity] 💀 Dispatch error:', e.message);
+                }
             }, 30000);
+            console.log('[Activity] 🚀 Dispatch loop started (30s interval)');
+
+            // Send first snapshot immediately (don't wait 30s)
+            setTimeout(async () => {
+                try {
+                    const snapshot = await ipcRenderer.invoke('GET_ACTIVITY_SNAPSHOT');
+                    console.log('[Activity] 📦 Initial snapshot:', JSON.stringify(snapshot));
+                    await apiService.sendActivitySnapshot(snapshot);
+                    console.log('[Activity] ✅ Initial snapshot sent');
+                } catch (e) {
+                    console.warn('[Activity] Initial snapshot failed:', e.message);
+                }
+            }, 3000); // 3s delay to let tracker warm up
         }
 
         /** Stop the tracker + dispatch loop on check-out */
